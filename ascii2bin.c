@@ -1,6 +1,10 @@
 /* $Header$
  * $Log$
- * Revision 1.1  1995/01/20 20:02:45  trq
+ * Revision 1.2  1996/07/26 20:09:35  trq
+ * Switched to accept output from genesis with the new star forming
+ * algorithm.
+ *
+ * Revision 1.1.1.1  1995/01/20  20:02:46  trq
  * Initial revision
  *
  * Revision 1.1  93/09/14  09:51:22  trq
@@ -25,18 +29,11 @@ main()
     int ngas ;
     int ndark ;
     int nstar ;
-    int last_nstar ;
     int count ;
-    float dummy ;
-    float *tform  = NULL;
-    float *tf ;
-    float last_tform ;
     struct gas_particle *gp, *lastgp;
     struct dark_particle *dp, *lastdp ;
-    struct star_particle *sp, *lastsp, *last_old_sp ;
+    struct star_particle *sp, *lastsp ;
 
-    last_nstar = 0 ;
-    last_tform = -1.e30 ;
     forever {
 	count=fscanf(stdin, "%d%*[, \t\n]%d%*[, \t\n]%d"
 		    ,&header.nbodies, &header.nsph, &header.nstar) ;
@@ -83,16 +80,6 @@ main()
 		       "<sorry, no memory for star particles, master>\n") ;
 		return -1;
 	    }
-	    if( tform == NULL){
-	      tform = (float *)malloc(nstar*sizeof(*tform));
-	    }
-	    else if(nstar > last_nstar){
-	      tform = (float *)realloc(tform,nstar*sizeof(*tform));
-	    }
-	    if(tform == NULL) {
-	      fprintf(stderr, "<sorry, no memory for tform, master>\n") ;
-	      return -1;
-	    }
 	}
 	else
 	  star_particles = NULL;
@@ -100,7 +87,6 @@ main()
 	lastgp = gas_particles + ngas ;
 	lastdp = dark_particles + ndark ;
 	lastsp = star_particles + nstar ;
-	last_old_sp = star_particles + last_nstar ;
 
 	for(gp=gas_particles; gp < lastgp ; gp++){
 	    fscanf(stdin,"%f%*[, \t\n]",&gp->mass);
@@ -200,22 +186,9 @@ main()
 	for(sp=star_particles; sp < lastsp ; sp++) {
 	    fscanf(stdin,"%f%*[, \t\n]",&sp->metals);
 	}
-	for(sp=star_particles, tf = tform ; sp < last_old_sp ; sp++, tf++) {
-	    fscanf(stdin,"%f%*[, \t\n]",&dummy);
-	    sp->tform = *tf ;
+	for(sp=star_particles; sp < lastsp ; sp++) {
+	    fscanf(stdin,"%f%*[, \t\n]",&sp->tform);
 	}
-	for(sp=star_particles + last_nstar, tf = tform + last_nstar ;
-		sp < lastsp ; sp++,tf++) {
-	    fscanf(stdin,"%f%*[, \t\n]",tf);
-	    if(*tf < last_tform){
-		fprintf(stderr,
-			"<sorry, error in star formation time, master>\n") ;
-		return -1;
-	    }
-	    sp->tform = *tf ;
-	    last_tform = *tf ;
-	}
-	last_nstar = nstar ;
 	for(gp=gas_particles; gp < lastgp ; gp++){
 	    count = fscanf(stdin,"%f%*[, \t\n]",&gp->phi);
 	    if ( (count == EOF) || (count==0) )
@@ -242,6 +215,5 @@ main()
 	   nstar,stdout) ;
 	fprintf(stderr, "read time %f\n",header.time) ;
     }
-    if(tform != NULL) free(tform);
     return 0;
 }
