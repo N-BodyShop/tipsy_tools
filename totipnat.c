@@ -26,92 +26,125 @@ int xdr_header()
   return 1;
 }
 
-void xdr_gas()
+int xdr_gas(struct gas_particle *gas)
 {
   if(sizeof(Real) == sizeof(float))
     {
-      xdr_vector(&xdrs, (char *) gas_particles,
-	     header.nsph*(sizeof(*gas_particles)/sizeof(Real)),
-	     sizeof(Real), xdr_float);
+      if(xdr_float(&xdrs, &gas->mass) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &gas->pos[0]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &gas->pos[1]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &gas->pos[2]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &gas->vel[0]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &gas->vel[1]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &gas->vel[2]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &gas->rho) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &gas->temp) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &gas->hsmooth) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &gas->metals) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &gas->phi) != TRUE)
+	return 0;
+      return 1;
     }
 }  
 
-void xdr_dark()
+int xdr_dark(struct dark_particle *dark)
 {
   if(sizeof(Real) == sizeof(float))
     {
-      xdr_vector(&xdrs, (char *) dark_particles,
-	     header.ndark*(sizeof(*dark_particles)/sizeof(Real)),
-	     sizeof(Real), xdr_float);
+      if(xdr_float(&xdrs, &dark->mass) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &dark->pos[0]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &dark->pos[1]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &dark->pos[2]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &dark->vel[0]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &dark->vel[1]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &dark->vel[2]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &dark->eps) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &dark->phi) != TRUE)
+	return 0;
+      return 1;
     }
 }  
 
-void xdr_star()
+int xdr_star(struct star_particle *star)
 {
   if(sizeof(Real) == sizeof(float))
     {
-      xdr_vector(&xdrs, (char *) star_particles,
-	     header.nstar*(sizeof(*star_particles)/sizeof(Real)),
-	     sizeof(Real), xdr_float);
+      if(xdr_float(&xdrs, &star->mass) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &star->pos[0]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &star->pos[1]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &star->pos[2]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &star->vel[0]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &star->vel[1]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &star->vel[2]) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &star->metals) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &star->tform) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &star->eps) != TRUE)
+	return 0;
+      if(xdr_float(&xdrs, &star->phi) != TRUE)
+	return 0;
+      return 1;
     }
 }  
 
 int
 main()
 {
+    struct gas_particle gas;
+    struct dark_particle dark;
+    struct star_particle star;
+    int i;
+
   xdrstdio_create(&xdrs, stdin, XDR_DECODE);
   forever {
 	if(xdr_header() != 1)
 	  break;
+	fprintf(stderr, "%g %d %d %d %d %d\n", header.time,
+		header.nbodies, header.ndim, header.nsph,
+		header.ndark, header.nstar);
 
-	if(gas_particles != NULL) free(gas_particles);
-	if(header.nsph != 0) {
-	    gas_particles = (struct gas_particle *)
-				malloc(header.nsph*sizeof(*gas_particles));
-	    if(gas_particles == NULL) {
-		printf("<sorry, no memory for gas particles, master>\n") ;
-		return -1;
-	    }
-	}
-	else
-	  gas_particles = NULL;
 
-	if(dark_particles != NULL) free(dark_particles);
-	if(header.ndark != 0) {
-	    dark_particles = (struct dark_particle *)
-				malloc(header.ndark*sizeof(*dark_particles));
-	    if(dark_particles == NULL) {
-		printf("<sorry, no memory for dark particles, master>\n") ;
-		return -1;
-	    }
-	}
-	else
-	  dark_particles = NULL;
-
-	if(star_particles != NULL) free(star_particles);
-	if(header.nstar != 0) {
-	    star_particles = (struct star_particle *)
-				malloc(header.nstar*sizeof(*star_particles));
-	    if(star_particles == NULL) {
-		printf("<sorry, no memory for star particles, master>\n") ;
-		return -1;
-	    }
-	}
-	else
-	  star_particles = NULL;
-
-	xdr_gas();
-	xdr_dark();
-	xdr_star();
-	
 	fwrite((char *)&header,sizeof(header),1,stdout) ;
-	fwrite((char *)gas_particles,sizeof(struct gas_particle),
-	      header.nsph, stdout) ;
-	fwrite((char *)dark_particles,sizeof(struct dark_particle),
-	       header.ndark,stdout) ;
-	fwrite((char *)star_particles,sizeof(struct star_particle),
-	      header.nstar, stdout) ;
-  
+	for(i = 0; i < header.nsph; i++) {
+	    xdr_gas(&gas);
+	    fwrite((char *)&gas,sizeof(struct gas_particle), 1, stdout) ;
+	}
+	for(i = 0; i < header.ndark; i++) {
+	    xdr_dark(&dark);
+	    fwrite((char *)&dark,sizeof(struct dark_particle), 1, stdout) ;
+	}
+	for(i = 0; i < header.nstar; i++) {
+	    xdr_star(&star);
+	    fwrite((char *)&star,sizeof(struct star_particle), 1, stdout) ;
+	}
+	
 	fprintf(stderr, "read time %f\n",header.time) ;
       }
   xdr_destroy(&xdrs);

@@ -2,16 +2,16 @@ TOOLS = ascii2bin bin2ascii totipnat totipstd snapshot
 all: $(TOOLS)
 
 ascii2bin: ascii2bin.o
-	$(CC) $(CFLAGS) -o ascii2bin ascii2bin.o $(LIBS)
+	$(CC) $(CFLAGS) -o ascii2bin $< $(LIBS)
 
 bin2ascii: bin2ascii.o
 	$(CC) $(CFLAGS) -o bin2ascii bin2ascii.o $(LIBS)
 
 totipnat: totipnat.o
-	$(CC) $(CFLAGS) -o totipnat totipnat.o $(LIBS)
+	$(CC) $(CFLAGS) -o totipnat $< $(LIBS)
 
 totipstd: totipstd.o
-	$(CC) $(CFLAGS) -o totipstd totipstd.o $(LIBS)
+	$(CC) $(CFLAGS) -o totipstd $< $(LIBS)
 
 snapshot: snapshot.o
 	$(CC) $(CFLAGS) -o snapshot snapshot.o $(LIBS)
