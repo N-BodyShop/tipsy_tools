@@ -1,17 +1,20 @@
 TOOLS = ascii2bin bin2ascii totipnat totipstd snapshot
+DEFS =  -DHAVE_STRING_H=1 -DHAVE_ALLOCA_H=1 -DHAVE_ALLOCA=1
+X_CFLAGS =   -nostdinc -I/usr/include -DSYSV -DSVR4 -DFUNCPROTO=7 -DNARROWPROTO
+CFLAGS =  $(DEFS) $(X_CFLAGS)
 all: $(TOOLS)
 
 ascii2bin: ascii2bin.o
-	$(CC) $(CFLAGS) -o ascii2bin $< $(LIBS)
+	$(CC) $(CFLAGS) -o ascii2bin ascii2bin.o $(LIBS)
 
 bin2ascii: bin2ascii.o
 	$(CC) $(CFLAGS) -o bin2ascii bin2ascii.o $(LIBS)
 
 totipnat: totipnat.o
-	$(CC) $(CFLAGS) -o totipnat $< $(LIBS)
+	$(CC) $(CFLAGS) -o totipnat totipnat.o $(LIBS)
 
 totipstd: totipstd.o
-	$(CC) $(CFLAGS) -o totipstd $< $(LIBS)
+	$(CC) $(CFLAGS) -o totipstd totipstd.o $(LIBS)
 
 snapshot: snapshot.o
 	$(CC) $(CFLAGS) -o snapshot snapshot.o $(LIBS)

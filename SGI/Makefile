@@ -1,6 +1,6 @@
 VPATH=..
-CC=gcc
-CFLAGS=-O2 -Wall
-LIBS=-lsun
+CC=cc
+CFLAGS=-O2 
+LIBS=
 
 include ../Makefile
