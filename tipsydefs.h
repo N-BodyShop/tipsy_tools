@@ -45,6 +45,7 @@ struct dump {
     int nsph ;
     int ndark ;
     int nstar ;
+    int pad;
 } ;
 
 struct dump header ;
