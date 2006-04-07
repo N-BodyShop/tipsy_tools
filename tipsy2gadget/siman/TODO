@@ -1,0 +1,52 @@
+CODING JOBS:
+
+* Why is parallel CIonise::thickRadiative() not working properly?
+* Implement better units reading
+* Scripting - decide on mechanism and sort it
+
+DATA:
+
+* UV normalization was done quickly. Need to sort out x-sections
+in CIonise then RECALCULATE data/UVNORM
+
+
+SCIENCE:
+
+* Correct through-put of redshift from CTipsyFile etc.
+* Milky way 1024/512 comparison at various redshifts
+* Mark particles contributing to DLA at various redshifts and pass
+  to Alyson
+* 
+
+CALLIBRATION & CHECKING:
+
+* Think of some CLOUDY comparison tests
+* See what effect changing grid resolution and region size has
+  (guessing the latter could be more important at higher z)
+* 
+
+INSTALLATION:
+
+Current chain of commands:
+
+aclocal
+automake -a
+libtoolize
+autoconf
+automake
+make
+
+ - a little long? 
+
+CORE PROJECT REMINDER:
+
+*Is a forming MW-like galaxy a typical DLA?*
+
+1. Do galaxies have a sensible HI distribution at z=0
+2. Where was HI currently in the disk at earlier times
+3. Column density/impact parameter at high z
+4. Kinematic properties (requires metallicities!)
+
+Side-questions (technical)
+
+a. How accurate does the RT need to be?
