@@ -45,7 +45,18 @@ struct dump {
     int nsph ;
     int ndark ;
     int nstar ;
-    int pad;
 } ;
 
 struct dump header ;
+
+struct dump_pad {
+    double time ;
+    int nbodies ;
+    int ndim ;
+    int nsph ;
+    int ndark ;
+    int nstar ;
+    int pad;
+} ;
+
+struct dump_pad header_pad ;
