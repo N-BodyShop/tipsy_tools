@@ -1,5 +1,8 @@
 /* $Header$
  * $Log$
+ * Revision 1.3  2006/07/19 00:10:06  trq
+ * Fixed up conversion programs to match changes to tipsydefs.h
+ *
  * Revision 1.2  1996/07/26 20:09:35  trq
  * Switched to accept output from genesis with the new star forming
  * algorithm.
@@ -30,9 +33,9 @@ main()
     int ndark ;
     int nstar ;
     int count ;
-    struct gas_particle *gp, *lastgp;
-    struct dark_particle *dp, *lastdp ;
-    struct star_particle *sp, *lastsp ;
+    struct gas_particle *gp, *lastgp, *gas_particles;
+    struct dark_particle *dp, *lastdp, *dark_particles;
+    struct star_particle *sp, *lastsp, *star_particles ;
 
     forever {
 	count=fscanf(stdin, "%d%*[, \t\n]%d%*[, \t\n]%d"

@@ -1,9 +1,6 @@
 #include <stdio.h>
 #include "tipsydefs.h"
 
-int free();
-void *malloc();
-
 int
 main(argc,argv)
 char *argv[];
@@ -19,7 +16,9 @@ int argc;
     static double currtime = 0.0;
     static long currpos = 0L ;
     static long lastpos = 0L ;
-
+    struct gas_particle *gas_particles;
+    struct dark_particle *dark_particles;
+    struct star_particle *star_particles;
 
     sscanf(argv[1],"%s",binaryfile.name) ;
     sscanf(argv[2],"%lf",&time) ;
