@@ -20,6 +20,9 @@ totipstd: totipstd.o
 snapshot: snapshot.o
 	$(CC) $(CFLAGS) -o snapshot snapshot.o $(LIBS)
 
+tipsy2snap: tipsy2snap.o
+	$(CC) $(CFLAGS) -o tipsy2snap tipsy2snap.o -lm $(LIBS)
+
 clean:
 	rm -f *.o
 	rm -f $(TOOLS)
