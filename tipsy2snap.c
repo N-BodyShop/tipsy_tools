@@ -16,6 +16,7 @@
 #include "tipsydefs.h"
 #include <rpc/types.h>
 #include <rpc/xdr.h>
+#include <assert.h>
 
 #define int4byte int
 
@@ -75,10 +76,12 @@ int startflag=1;
 float mass_factor,length_factor,vel_factor;
 float redshift,aex;
 
+int load_header(FILE *outp);
+int load_data(FILE *outp);
+int write_snapshot();
+
 int main(int argc, char **argv)
 {
-	FILE *outp;
-
 	if( argc != 3 ) {
 	    fprintf(stderr,
 		    "usage: tipsy2snap BoxSize(Mpc/h) Hubble_Param(0.01*H0) < infile > outfile\n");
@@ -97,15 +100,13 @@ int main(int argc, char **argv)
 }
 
 XDR xdrs;
+struct dump header;
 
-load_header(outp)
-FILE *outp;
+int
+load_header(FILE *outp)
 {
 	int i;
 	int NStar;
-	float junk;
-	char pname[80];
-	struct dump header;
 
 /* Read in tipsy header info */
 	xdrstdio_create(&xdrs, outp, XDR_DECODE);
@@ -113,6 +114,8 @@ FILE *outp;
 	    fprintf(stderr, "Bad header\n");
 	    exit(-1);
 	    }
+	
+	assert(header.ndim == 3);
 	
 	Nhot = 0;
 	NumPart = header.nbodies;
@@ -159,8 +162,8 @@ struct gas_particle *gas;
 struct dark_particle *dark;
 struct star_particle *star;
 
-load_data(outp)
-FILE *outp;
+int
+load_data(FILE *outp)
 {
 	int i;
 	double oldmass,newmass;
@@ -284,7 +287,15 @@ int write_snapshot()
 	{
 	  for(n=0;n<header1.npart[k];n++)
 	    {
-	      fwrite(&P[pc_new].Pos[0], sizeof(float), 3, fd);
+		if(k == 0) {
+		    fwrite(&gas[n].pos[0], sizeof(float), 3, fd);
+		    }
+		else if(k == 1) {
+		    fwrite(&dark[n].pos[0], sizeof(float), 3, fd);
+		    }
+		else {
+		    assert(0);	/* incomplete implementation */
+		    }
 	      pc_new++;
 	    }
 	}
@@ -295,7 +306,15 @@ int write_snapshot()
 	{
 	  for(n=0;n<header1.npart[k];n++)
 	    {
-	      fwrite(&P[pc_new].Vel[0], sizeof(float), 3, fd);
+		if(k == 0) {
+		    fwrite(&gas[n].vel[0], sizeof(float), 3, fd);
+		    }
+		else if(k == 1) {
+		    fwrite(&dark[n].vel[0], sizeof(float), 3, fd);
+		    }
+		else {
+		    assert(0);	/* incomplete implementation */
+		    }
 	      pc_new++;
 	    }
 	}
