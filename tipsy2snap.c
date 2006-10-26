@@ -79,6 +79,7 @@ float redshift,aex;
 int load_header(FILE *outp);
 int load_data(FILE *outp);
 int write_snapshot();
+int cosmounits();
 
 int main(int argc, char **argv)
 {
@@ -127,6 +128,8 @@ load_header(FILE *outp)
 	}
 	aex = header.time;
 
+	cosmounits();
+	
 /* Unit conversion from TREEBI to gadget standard */
 	mass_factor = unit_Mass/1.989e43*hubble; // Convert to 10^10 M_o/h
 	length_factor = unit_Length/3.085678e21*hubble ; // Convert to kpc/h
@@ -140,8 +143,9 @@ load_header(FILE *outp)
 	header1.npart[2] = Nhot;
 	for(i=3;i<6;i++) header1.npart[i] = 0;
 	for(i=0;i<6;i++) header1.npartTotal[i] = header1.npart[i];
-	/* XXX needs updating below */
-	for(i=0;i<6;i++) header1.mass[i] = mass_factor*masses[i];
+	for(i=0;i<6;i++) header1.mass[i] = 0.0;	/* masses will be
+						   specifed on a per
+						   particle basis */
 	header1.time = aex;
 	header1.redshift = 1.0/aex - 1.0;
 	header1.flag_sfr = 1;	/* do you want star formation? */
@@ -166,7 +170,7 @@ int
 load_data(FILE *outp)
 {
 	int i;
-	double oldmass,newmass;
+	double newmass;
 
 	if(!(gas=malloc((header.nsph)*sizeof(struct gas_particle))))    {
 		fprintf(stderr,
@@ -187,11 +191,6 @@ load_data(FILE *outp)
 		exit(-1);
 	}
 
-	oldmass = 0.;
-	nmass = 0;
-	if( Ngas == 0 ) nmass = 1;
-	for( i=0; i<100; i++ ) masses[i] = 0.;
-
 	for(i = 0; i < header.nsph; i++) {
 	    xdr_gas(&xdrs, &(gas[i]));
 	    gas[i].pos[0] = length_factor*(gas[i].pos[0]+0.5);
@@ -200,14 +199,8 @@ load_data(FILE *outp)
 	    gas[i].vel[0] *= vel_factor;
 	    gas[i].vel[1] *= vel_factor;
 	    gas[i].vel[2] *= vel_factor;
+	    gas[i].mass *= mass_factor;
 	    newmass = gas[i].mass;
-	    fscanf(outp,"%lg",&newmass);
-	    if( oldmass != newmass ) {
-		masses[nmass] = newmass;
-		masscount[nmass] = i;
-		oldmass = newmass;
-		nmass++;
-		}
 	    totMass += newmass;
 	    }
 	for(i = 0; i < header.ndark; i++) {
@@ -218,14 +211,10 @@ load_data(FILE *outp)
 	    dark[i].vel[0] *= vel_factor;
 	    dark[i].vel[1] *= vel_factor;
 	    dark[i].vel[2] *= vel_factor;
+	    if(i == 0)
+      fprintf(stderr, "Particle mass: %g\n", dark[0].mass);
+	    dark[i].mass *= mass_factor;
 	    newmass = dark[i].mass;
-	    fscanf(outp,"%lg",&newmass);
-	    if( oldmass != newmass ) {
-		masses[nmass] = newmass;
-		masscount[nmass] = i+header.nsph;
-		oldmass = newmass;
-		nmass++;
-		}
 	    totMass += newmass;
 	    }
 	for(i = 0; i < header.nstar; i++) {
@@ -236,20 +225,14 @@ load_data(FILE *outp)
 	    star[i].vel[0] *= vel_factor;
 	    star[i].vel[1] *= vel_factor;
 	    star[i].vel[2] *= vel_factor;
+	    star[i].mass *= mass_factor;
 	    newmass = star[i].mass;
-	    fscanf(outp,"%lg",&newmass);
-	    if( oldmass != newmass ) {
-		masses[nmass] = newmass;
-		masscount[nmass] = i+header.nsph+header.ndark;
-		oldmass = newmass;
-		nmass++;
-		}
 	    totMass += newmass;
 	    }
 	masscount[nmass] = NumPart;
-	for(i=0;i<6;i++) header1.mass[i] = mass_factor*masses[i];
-	for(i=1; i<=nmass; i++ ) fprintf(stderr,"masses %d: %d %g\n",i,masscount[i],masses[i-1]);
-
+	header1.Omega0 = totMass/mass_factor;
+	header1.OmegaLambda = 1.0 - header1.Omega0;
+	
 	return 0;
 }
 
@@ -274,6 +257,7 @@ int write_snapshot()
   for(i=0, pc=1; i<files; i++, pc=pc_new)
     {
       fprintf(stderr,"outputting...");
+      fprintf(stderr, "Particle mass: %g\n", dark[0].mass);
 
       SKIP;
       fwrite(&header1, sizeof(header1), 1, fd);
@@ -334,22 +318,40 @@ int write_snapshot()
 	}
       SKIP;
 
+      SKIP;
+      for(k=0,pc_new=pc;k<6;k++)
+	{
+	  for(n=0;n<header1.npart[k];n++)
+	    {
+		if(k == 0) {
+		    fwrite(&gas[n].mass, sizeof(float), 1, fd);
+		    }
+		else if(k == 1) {
+		    fwrite(&dark[n].mass, sizeof(float), 1, fd);
+		    }
+		else {
+		    assert(0);	/* incomplete implementation */
+		    }
+	      pc_new++;
+	    }
+	}
+      SKIP;
 
       if(header1.npart[0]>0)
 	{
 	  SKIP;
 	  for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 	    {
-	      fwrite(&zero, sizeof(float), 1, fd);
-	      pc_sph++;
+		fwrite(&gas[n].temp, sizeof(float), 1, fd);
+		pc_sph++;
 	    }
 	  SKIP;
 
 	  SKIP;
 	  for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 	    {
-	      fwrite(&zero, sizeof(float), 1, fd);
-	      pc_sph++;
+		fwrite(&gas[n].rho, sizeof(float), 1, fd);
+		pc_sph++;
 	    }
 	  SKIP;
 
@@ -368,3 +370,35 @@ int write_snapshot()
 	return 0;
 }
 
+int
+cosmounits()
+{
+    double Pi=3.14159265358979323846;
+    double km=1.E5;
+    double Mpc=3.085678e24;
+#if 0
+    double m_p=1.6726231E-24;     /* proton mass */
+    double k_B=1.380622E-16;      /* Boltzman constant */
+#endif
+
+        if( 1.-totMass > 1.e-6 ) {
+                fprintf(stderr,"Setting Lambda = %g\n",1.-totMass);
+                Lambda = 1.-totMass;
+        }
+        else Lambda = 0.0;
+
+    H0=sqrt(8*Pi/3);
+        t0 = 2./(3*H0);
+
+    unit_Time=H0*Mpc/(100*hubble*km);
+    unit_Density=1.8791E-29*hubble*hubble;
+    unit_Length=boxsize*Mpc/hubble;
+    unit_Mass=unit_Density*unit_Length*unit_Length*unit_Length;
+    unit_Velocity=unit_Length/unit_Time;
+
+        fprintf(stderr,"COSMO PARAMS:  L=%g h^-1Mpc, h=%g, Omega=%g\n",
+		boxsize,hubble,totMass);
+        fprintf(stderr,"UNITS: T=%g rho=%g L=%g M=%g v=%g\n",unit_Time,unit_Density,unit_Length,unit_Mass,unit_Velocity);
+
+        return 0;
+}
