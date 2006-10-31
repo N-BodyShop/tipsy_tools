@@ -119,6 +119,16 @@ struct dump {
 } ;
 struct dump header ;
 
+void free_memory(void);
+void allocate_memory(void);
+void load_snapshot(char *fname, int files, int type);
+void update_tipsy_header(char *output_fname);
+void filter_darkmatter();
+void filter_star();
+void filter_gas();
+int output_tipsy_gas(char *output_fname);
+int output_tipsy_star(char *output_fname);
+int output_tipsy_dark(char *output_fname);
 
 
 /* Here we load a snapshot file. It can be distributed
@@ -192,6 +202,7 @@ int main(int argc, char **argv)
 }
 
 
+void
 filter_gas()
 {
   int  i;
@@ -252,6 +263,7 @@ filter_gas()
 }
 
 
+void
 filter_darkmatter()
 {
   int  i;
@@ -264,6 +276,7 @@ filter_darkmatter()
     }
 }
 
+void
 filter_star()
 {
   int  i;
@@ -286,7 +299,7 @@ int output_tipsy_gas(char *output_fname)
 
   if(!(outfile = fopen(output_fname,"w")))
     {
-      printf("can't open file `%s'\n", outfile);
+      printf("can't open file `%s'\n", output_fname);
       exit(0);
     }
   
@@ -338,7 +351,7 @@ int output_tipsy_star(char *output_fname)
 
   if(!(outfile = fopen(output_fname,"a")))
     {
-      printf("can't open file `%s'\n", outfile);
+      printf("can't open file `%s'\n", output_fname);
       exit(0);
     }
   
@@ -376,16 +389,15 @@ int output_tipsy_star(char *output_fname)
 }
 
 
-int update_tipsy_header(char *output_fname)
+void update_tipsy_header(char *output_fname)
 {
-  int   i;
   FILE *outfile;
 
   printf("updating tipsy header...\n");
 
   if(!(outfile = fopen(output_fname,"r+")))
     {
-      printf("can't open file `%s'\n", outfile);
+      printf("can't open file `%s'\n", output_fname);
       exit(0);
     }
 
@@ -408,7 +420,7 @@ int output_tipsy_dark(char *output_fname)
 
   if(!(outfile = fopen(output_fname,"a")))
     {
-      printf("can't open file `%s'\n", outfile);
+      printf("can't open file `%s'\n", output_fname);
       exit(0);
     }
   
@@ -448,12 +460,12 @@ int output_tipsy_dark(char *output_fname)
  * binary file format. (A snapshot may be distributed
  * into multiple files.
  */
-int load_snapshot(char *fname, int files, int type)
+void load_snapshot(char *fname, int files, int type)
 {
   FILE *fd;
   char   buf[200];
-  int    i,j,k,dummy,ntot_withmasses;
-  int    t,n,off,pc,pc_new,pc_sph;
+  int    i,k,dummy,ntot_withmasses;
+  int    n,pc,pc_new,pc_sph;
 
 #define SKIP fread(&dummy, sizeof(dummy), 1, fd);
 
@@ -689,7 +701,7 @@ int load_snapshot(char *fname, int files, int type)
 /* this routine allocates the memory for the 
  * particle data.
  */
-int allocate_memory(void)
+void allocate_memory(void)
 {
 /*  fprintf(stderr,"allocating memory...\n");*/
 
@@ -715,31 +727,10 @@ int allocate_memory(void)
 }
 
 
-int free_memory(void)
+void free_memory(void)
 {
   Id++;
   P++;
   free(Id);
   free(P);
 }
-
-
-
-
-
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
