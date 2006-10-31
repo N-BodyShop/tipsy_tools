@@ -122,10 +122,6 @@ load_header(FILE *outp)
 	NumPart = header.nbodies;
 	Ngas = header.nsph;
 	NStar = header.nstar;
-	if( NStar != 0 ) {
-		fprintf(stderr,"No stars allowed-- converts only m,r,v\n");
-		exit(-1);
-	}
 	aex = header.time;
 
 	cosmounits();
@@ -142,14 +138,15 @@ load_header(FILE *outp)
 	header1.npart[1] = header.ndark;
 	header1.npart[2] = Nhot;
 	for(i=3;i<6;i++) header1.npart[i] = 0;
+	header1.npart[4] = NStar;
 	for(i=0;i<6;i++) header1.npartTotal[i] = header1.npart[i];
 	for(i=0;i<6;i++) header1.mass[i] = 0.0;	/* masses will be
 						   specifed on a per
 						   particle basis */
 	header1.time = aex;
 	header1.redshift = 1.0/aex - 1.0;
-	header1.flag_sfr = 1;	/* do you want star formation? */
-	header1.flag_feedback = 1;	/* what sort of feedback? */
+	header1.flag_sfr = 0;	/* This avoids hybrid particles */
+	header1.flag_feedback = 0;	/* what sort of feedback? */
 	header1.flag_cooling = 1;	/* do you want cooling? */
 	header1.num_files = 1;	        /* single file snapshots */
 	header1.BoxSize = boxsize*1.e3;
@@ -277,8 +274,11 @@ int write_snapshot()
 		else if(k == 1) {
 		    fwrite(&dark[n].pos[0], sizeof(float), 3, fd);
 		    }
+		else if(k == 4) {
+		    fwrite(&star[n].pos[0], sizeof(float), 3, fd);
+		    }
 		else {
-		    assert(0);	/* incomplete implementation */
+		    (0);	/* incomplete implementation */
 		    }
 	      pc_new++;
 	    }
@@ -295,6 +295,9 @@ int write_snapshot()
 		    }
 		else if(k == 1) {
 		    fwrite(&dark[n].vel[0], sizeof(float), 3, fd);
+		    }
+		else if(k == 4) {
+		    fwrite(&star[n].vel[0], sizeof(float), 3, fd);
 		    }
 		else {
 		    assert(0);	/* incomplete implementation */
@@ -329,6 +332,9 @@ int write_snapshot()
 		else if(k == 1) {
 		    fwrite(&dark[n].mass, sizeof(float), 1, fd);
 		    }
+		else if(k == 4) {
+		    fwrite(&star[n].mass, sizeof(float), 1, fd);
+		    }
 		else {
 		    assert(0);	/* incomplete implementation */
 		    }
@@ -355,6 +361,25 @@ int write_snapshot()
 	    }
 	  SKIP;
 
+	  /* Electron density */
+	  SKIP;
+	  for(n=0, pc_sph=pc; n<header1.npart[0];n++)
+	    {
+	      fwrite(&zero, sizeof(float), 1, fd);
+	      pc_sph++;
+	    }
+	  SKIP;
+
+	  /* Neutral Hydrogen density */
+	  SKIP;
+	  for(n=0, pc_sph=pc; n<header1.npart[0];n++)
+	    {
+	      fwrite(&zero, sizeof(float), 1, fd);
+	      pc_sph++;
+	    }
+	  SKIP;
+
+	  /* smoothing length? */
 	  SKIP;
 	  for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 	    {
@@ -364,6 +389,32 @@ int write_snapshot()
 	  SKIP;
 	}
 
+      /* Stellar ages */
+      if(header1.npart[4]>0) {
+	  SKIP;
+	  for(n=0; n<header1.npart[4];n++)
+	    {
+		fwrite(&star[n].tform, sizeof(float), 1, fd);
+	    }
+	  SKIP;
+	  }
+      /* metallicities */
+      if(header1.npart[4]>0 || header1.npart[0] > 0) {
+
+	  SKIP;
+	  for(n=0; n<header1.npart[0];n++)
+	    {
+		fwrite(&gas[n].metals, sizeof(float), 1, fd);
+	    }
+	  SKIP;
+
+	  SKIP;
+	  for(n=0; n<header1.npart[4];n++)
+	    {
+		fwrite(&star[n].metals, sizeof(float), 1, fd);
+	    }
+	  SKIP;
+	  }
     }
 	fprintf(stderr,"done.\n");
 
