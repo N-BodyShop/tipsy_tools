@@ -12,26 +12,20 @@ m4_ifdef([AS_HELP_STRING], [], [AC_DEFUN([AS_HELP_STRING], [AC_HELP_STRING($][@)
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_CXX
+AC_PROG_RANLIB
 AC_C_CONST
 AC_EXEEXT
-AC_LIBTOOL_DLOPEN
-AC_PROG_LIBTOOL
-AC_SUBST([LIBTOOL_DEPS])
 
 # Checks for libraries.
 AC_PATH_XTRA
-AC_CHECK_LIB(glut,main,[ AC_DEFINE(SIMAN_VIS) EXTRALIBS="$EXTRALIBS -lglut" ])
-AC_CHECK_LIB(CCfits,main,[ AC_DEFINE(SIMAN_FITS) EXTRALIBS="$EXTRALIBS -lCCfits" ])
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([GL/gl.h GL/glu.h GL/glx.h GL/freeglut.h])
 AC_HEADER_TIME
 
 save_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS $X_CFLAGS"
 LIBS="$LIBS $EXTRALIBS"
-AC_CHECK_HEADERS([X11/extensions/xf86vmode.h], [], [], [#include <X11/Xlib.h>])
 CFLAGS="$save_CFLAGS"
 
 # Checks for library functions.
@@ -44,7 +38,6 @@ AC_SUBST([LIBM])
 # Generate output.
 AC_CONFIG_FILES([Makefile
                  base/Makefile
-                 visual/Makefile
                  extra/Makefile
                  progs/Makefile])
 AC_OUTPUT

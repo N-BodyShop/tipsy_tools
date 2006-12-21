@@ -1,6 +1,9 @@
 This file contains information on how to compile and run convsim, 
 which converts tipsy files to gadget format. 
 
+This is a stripped down version of SIMAN derived from Andrew Pontzen's
+distribution.
+
 CONVSIM
 
 1) For the purpose of most users, the following are the practical 

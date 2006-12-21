@@ -1,6 +1,6 @@
-lib_LTLIBRARIES = libsiman.la
+noinst_LIBRARIES = libsiman.a
 
-libsiman_la_SOURCES = basesimsnap.cpp columngrid.cpp endian.cpp \
+libsiman_a_SOURCES = basesimsnap.cpp columngrid.cpp endian.cpp \
 		filter.cpp gadgetfile.cpp \
 		geometry.cpp grid.cpp metric.cpp \
 		particle.cpp rational.cpp scripted.cpp \
@@ -11,10 +11,10 @@ libsiman_la_SOURCES = basesimsnap.cpp columngrid.cpp endian.cpp \
 
 EXTRA_DIST = endian.hpp
 
-libsiman_ladir = $(pkgincludedir)/base/
+libsiman_adir = $(pkgincludedir)/base/
 libsiman_ldadd = $(EXTRALIBS)
 
-libsiman_la_HEADERS = siman.hpp basesimsnap.hpp columngrid.hpp \
+libsiman_a_HEADERS = siman.hpp basesimsnap.hpp columngrid.hpp \
 		filter.hpp gadgetfile.hpp geometry.hpp grid.hpp \
 		metric.hpp particle.hpp rational.hpp scripted.hpp \
 		simanexception.hpp simanobject.hpp simsnap.hpp \

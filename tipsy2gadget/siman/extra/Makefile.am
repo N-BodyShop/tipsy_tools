@@ -1,9 +1,9 @@
 INCLUDES = -I../base/
 
-lib_LTLIBRARIES = libsimanextra.la
-libsimanextra_la_SOURCES = ionise.cpp foffile.cpp subsets.cpp
+noinst_LIBRARIES = libsimanextra.a
+libsimanextra_a_SOURCES = ionise.cpp foffile.cpp subsets.cpp
 
 
-libsimanextra_ladir = $(pkgincludedir)/extra/
+libsimanextra_adir = $(pkgincludedir)/extra/
 
-libsimanextra_la_HEADERS = ionise.hpp foffile.hpp subsets.hpp ../extra.hpp
+libsimanextra_a_HEADERS = ionise.hpp foffile.hpp subsets.hpp ../extra.hpp

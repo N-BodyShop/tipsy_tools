@@ -1,6 +1,6 @@
 INCLUDES = -I../../
-bin_PROGRAMS = dumphalo glancesim ionisetest makeabs siman testsim vishalo convsim
-LDADD = ../base/libsiman.la ../extra/libsimanextra.la ../visual/libsimanvis.la
+bin_PROGRAMS = dumphalo glancesim ionisetest makeabs siman testsim convsim
+LDADD = ../base/libsiman.a ../extra/libsimanextra.a
 
 
 
@@ -15,4 +15,3 @@ makeabs_SOURCES=makeabs.cpp
 siman_SOURCES=siman.cpp
 testsim_SOURCES=test.cpp
 
-vishalo_SOURCES=vishalo.cpp
