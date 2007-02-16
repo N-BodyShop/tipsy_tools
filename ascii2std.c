@@ -41,7 +41,7 @@ main()
 	ngas=header.nsph;
 	nstar = header.nstar ;
 	ndark = header.ndark = nbodies - nstar - ngas ;
-	if(gas_particles != NULL) free(gas_particles);
+	/*if(gas_particles != NULL) free(gas_particles);*/
 	if(ngas != 0) {
 	    gas_particles =
 		(struct gas_particle *) malloc(ngas*sizeof(*gas_particles));
@@ -51,9 +51,9 @@ main()
 		return -1;
 	    }
 	}
-	else
+	/*else
 	  gas_particles = NULL;
-	if(dark_particles != NULL) free(dark_particles);
+	if(dark_particles != NULL) free(dark_particles);*/
 	if(ndark != 0) {
 	    dark_particles =
 		(struct dark_particle *) malloc(ndark*sizeof(*dark_particles));
@@ -63,9 +63,9 @@ main()
 		return -1;
 	    }
 	}
-	else
+	/*else
 	  dark_particles = NULL;
-	if(star_particles != NULL) free(star_particles);
+	if(star_particles != NULL) free(star_particles);*/
 	if(nstar != 0) {
 	    star_particles =
 		 (struct star_particle *)malloc(nstar*sizeof(*star_particles));
@@ -75,8 +75,8 @@ main()
 		return -1;
 	    }
 	}
-	else
-	  star_particles = NULL;
+	/*else
+	  star_particles = NULL;*/
 
 	lastgp = gas_particles + ngas ;
 	lastdp = dark_particles + ndark ;
