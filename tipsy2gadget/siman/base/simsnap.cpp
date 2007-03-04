@@ -1004,6 +1004,8 @@ void CSimSnap::getExactBoundaries(float &x1, float &x2, float &y1, float &y2, fl
 void CSimSnap::write(string filename, int filetype) {
   if(filetype==gadget) {
     CGadgetFile::nativeWrite(this, filename);
+  } else if(filetype==tipsy) {
+    CTipsyFile::nativeWrite(this, filename);
   } else if(filetype==native) {
     CBaseSimSnap::nativeWrite(this,filename);
   } else {

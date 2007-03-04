@@ -9,7 +9,7 @@
 // TIPSYFILE.CPP
 
 #include "siman.hpp"
-#include "endian.hpp"
+#include "xdrfile.hpp"
 
 using namespace std;
 
@@ -32,32 +32,30 @@ CTipsyFile::CTipsyFile(const char *fname_in) {
 
 bool CTipsyFile::load() {
   
-  bool flipendian = false;
+  bool xdrdata = false;
 
   // returns true for success
 
   ifstream file(fname,ios::binary);
 
-  ENDINIT;
-  
   if(file.is_open()) {
 
     // READ HEADER
+      // Note that this isn't perfectly portable.  E.g. if a system
+      // happens to have 64 bit ints, this will fail.
 
     file.read((char*) &header,sizeof(header));
     
     if(header.nsph + header.ndark + header.nstar != header.nbodies || header.ndim>100) {
-    
-      END4(&header.nsph);
-      END4(&header.ndark);
-      END4(&header.nstar);
-      END4(&header.nbodies);
-      END4(&header.ndim);
-      END8(&header.time);
+	XDR xdrs;
+	xdrmem_create(&xdrs, reinterpret_cast<char *>(&header), sizeof(header),
+		      XDR_DECODE);
+	xdr_template(&xdrs, &header);
+	xdr_destroy(&xdrs);
     
       if(header.nsph + header.ndark + header.nstar == header.nbodies && header.ndim<100) {
-	cerr << "CTipsyFile: Wrong endian, auto-flipping (performance warning)" << endl;
-	flipendian = true;
+	cerr << "CTipsyFile: Using Standard tipsy (XDR) format, auto-flipping (performance warning)" << endl;
+	xdrdata = true;
        	
       } else {
 	cerr << "CTipsyFile: Don't recognise this file format" << endl;
@@ -102,9 +100,21 @@ bool CTipsyFile::load() {
     if(header.nstar>0)
       tform = createArray("tform","TIPSY tform");
 
+    float *softening = NULL;
+    softening = createArray("softening", "Gravitational softening");
+    
+    float *potential = NULL;
+    potential = createArray("potential", "Gravitational potential");
+    
     for(unsigned int n=header.nsph;n!=0;--n) {
       file.read((char*) &t_gp,sizeof(tipsy_gas_particle));
-      if(flipendian) swapDataEndian(&t_gp,4,sizeof(tipsy_gas_particle));      
+      if(xdrdata) {
+	  XDR xdrs;
+	  xdrmem_create(&xdrs, reinterpret_cast<char *>(&t_gp),
+			sizeof(tipsy_gas_particle), XDR_DECODE);
+	  xdr_template(&xdrs, &t_gp);
+	  xdr_destroy(&xdrs);
+	  }
       pParticles[i]->x=t_gp.pos[0];
       pParticles[i]->y=t_gp.pos[1];
       pParticles[i]->z=t_gp.pos[2];
@@ -114,17 +124,26 @@ bool CTipsyFile::load() {
       pParticles[i]->mass=t_gp.mass;
       pParticles[i]->rho=t_gp.rho;
       pParticles[i]->temp=t_gp.temp;
+      pParticles[i]->metal=t_gp.metals;
       //cerr << pParticles[i]->temp << endl;
 
       pParticles[i]->ne=-1;
      
       pParticles[i]->type=CParticle::gas;
+      softening[i] = t_gp.hsmooth;
+      potential[i] = t_gp.phi;
       i++;
     }
 
     for(unsigned int n=header.ndark;n!=0;--n) {
       file.read((char*) &t_dp,sizeof(tipsy_dark_particle));
-      if(flipendian) swapDataEndian(&t_dp,4,sizeof(tipsy_dark_particle));
+      if(xdrdata) {
+	  XDR xdrs;
+	  xdrmem_create(&xdrs, reinterpret_cast<char *>(&t_dp),
+			sizeof(tipsy_dark_particle), XDR_DECODE);
+	  xdr_template(&xdrs, &t_dp);
+	  xdr_destroy(&xdrs);
+	  }
       pParticles[i]->x=t_dp.pos[0];
       pParticles[i]->y=t_dp.pos[1];
       pParticles[i]->z=t_dp.pos[2];
@@ -133,12 +152,20 @@ bool CTipsyFile::load() {
       pParticles[i]->vz=t_dp.vel[2];
       pParticles[i]->mass=t_dp.mass;
       pParticles[i]->type=CParticle::dm;
+      softening[i] = t_dp.eps;
+      potential[i] = t_dp.phi;
       i++;
     }
 
     for(unsigned int n=header.nstar;n!=0;--n) {
       file.read((char*) &t_sp,sizeof(tipsy_star_particle));
-      if(flipendian) swapDataEndian(&t_sp,4,sizeof(tipsy_star_particle));
+      if(xdrdata) {
+	  XDR xdrs;
+	  xdrmem_create(&xdrs, reinterpret_cast<char *>(&t_sp),
+			sizeof(tipsy_star_particle), XDR_DECODE);
+	  xdr_template(&xdrs, &t_sp);
+	  xdr_destroy(&xdrs);
+	  }
       pParticles[i]->x=t_sp.pos[0];
       pParticles[i]->y=t_sp.pos[1];
       pParticles[i]->z=t_sp.pos[2];
@@ -146,7 +173,10 @@ bool CTipsyFile::load() {
       pParticles[i]->vy=t_sp.vel[1];
       pParticles[i]->vz=t_sp.vel[2];
       pParticles[i]->mass=t_sp.mass;
+      pParticles[i]->metal=t_gp.metals;
       pParticles[i]->type=CParticle::star;
+      softening[i] = t_sp.eps;
+      potential[i] = t_sp.phi;
       tform[i]=t_sp.tform;
       i++;
     }
@@ -267,4 +297,172 @@ bool CTipsyFile::load() {
   }
 
 }
+
+void CTipsyFile::nativeWrite(CSimSnap *s, string filename) {
+  cerr << "CTipsyFile: writing " << filename << "..." << endl;
+
+  // open file
+
+  FILE *tipsyFp = fopen(filename.c_str(), "a");  // Create file
+  if(tipsyFp == NULL) {
+      assert(0);
+      }
+  fclose(tipsyFp);
+  tipsyFp = fopen(filename.c_str(), "rb+");
+  if(tipsyFp == NULL) {
+      assert(0);
+      }
+  XDR xdrs;
+
+  // Always use XDR format
+  xdrstdio_create(&xdrs, tipsyFp, XDR_ENCODE);
+
+  ofstream file(filename.c_str(),ios::binary);
+
+  // count particles
+
+  unsigned int numStar=0, numDM=0, numGas=0, numTot = s->getNumParticles();
+
+  CParticle *p;
+  unsigned int n;
+
+  for(n=0; n<numTot; n++) {
+    p=s->getParticle(n);
+    switch(p->type) { 
+
+    case CParticle::gas:
+      numGas+=1;
+      break;
+
+    case CParticle::dm:
+      numDM+=1;
+      break;
+
+    case CParticle::star:
+      numStar+=1;
+      break;
+
+    }
+    s->releaseParticle(p);
+  }
+
+  // create virtual simulations for ease of ordering
+  // (tipsy files insist on specific ordering of particles)
+
+  CParticleTypeFilter fDM(CParticle::dm);
+  CParticleTypeFilter fStar(CParticle::star);
+  CParticleTypeFilter fGas(CParticle::gas);
+
+  CSubset sGas(s,fGas);
+  CSubset sDM(s,fDM);
+  CSubset sStar(s,fStar);
+
+  // create union in correct order for writing!
+
+  CUnion sOrdered(s);
+  sOrdered.add(&sStar);
+  sOrdered.add(&sDM);
+  sOrdered.add(&sGas);
+  
+  assert(sOrdered.getNumParticles() == numTot);
+  assert(numGas + numDM + numStar == numTot);
+
+  float *tform = sOrdered.getArray("tform");
+  if(tform == NULL && numStar > 0) {
+      cerr << "WARNING: no star formation time" << endl;
+      tform = sOrdered.createArray("tform", "TIPSY tform");
+      }
+
+  float *eps = sOrdered.getArray("softening");
+  if(eps == NULL) {
+      cerr << "WARNING: no softening" << endl;
+      eps = sOrdered.createArray("softening", "Gravitational softening");
+      }
+
+  float *potential = sOrdered.getArray("potential");
+  if(eps == NULL) {
+      cerr << "WARNING: no softening" << endl;
+      potential = sOrdered.createArray("potential", "Gravitational potential");
+      }
+  
+  tipsy_header header;
+  
+  header.time = 1/(1+s->getRedshift());
+  header.nbodies = numTot;
+  header.ndim = 3;
+  header.nsph = numGas;
+  header.ndark = numDM;
+  header.nstar = numStar;
+  header.zero = 0;
+  xdr_template(&xdrs, &header);
+
+  for(n=0; n<numGas; n++) {
+    p =  sOrdered.getParticle(n);
+    
+    tipsy_gas_particle gp;
+    
+    gp.pos[0] = p->x;
+    gp.pos[1] = p->y;
+    gp.pos[2] = p->z;
+    gp.vel[0] = p->vx;
+    gp.vel[1] = p->vy;
+    gp.vel[2] = p->vz;
+    gp.mass = p->mass;
+    gp.rho = p->rho;
+    gp.temp = p->temp;
+    gp.hsmooth = eps[n]; // XXX The arrays may not be sorted as the particles.
+    gp.metals = p->metal;
+    gp.phi = potential[n];
+    
+    if(!xdr_template(&xdrs, &gp)) {
+	assert(0);
+	}
+    sOrdered.releaseParticle(p);
+  }
+
+  for(n=numGas; n<numGas+numDM; n++) {
+    p =  sOrdered.getParticle(n);
+    
+    tipsy_dark_particle dp;
+    
+    dp.pos[0] = p->x;
+    dp.pos[1] = p->y;
+    dp.pos[2] = p->z;
+    dp.vel[0] = p->vx;
+    dp.vel[1] = p->vy;
+    dp.vel[2] = p->vz;
+    dp.mass = p->mass;
+    dp.eps = eps[n];		// XXX are these sorted?
+    dp.phi = potential[n];
+    
+    if(!xdr_template(&xdrs, &dp)) {
+	assert(0);
+	}
+    sOrdered.releaseParticle(p);
+  }
+
+  for(n=numGas+numDM; n<numTot; n++) {
+    p =  sOrdered.getParticle(n);
+    
+    tipsy_star_particle sp;
+    
+    sp.pos[0] = p->x;
+    sp.pos[1] = p->y;
+    sp.pos[2] = p->z;
+    sp.vel[0] = p->vx;
+    sp.vel[1] = p->vy;
+    sp.vel[2] = p->vz;
+    sp.mass = p->mass;
+    sp.metals = p->metal;
+    sp.tform = tform[n-(numGas+numDM)];
+    sp.eps = eps[n];
+    sp.phi = potential[n];
+    
+    if(!xdr_template(&xdrs, &sp)) {
+	assert(0);
+	}
+    sOrdered.releaseParticle(p);
+  }
+}
+
 
