@@ -64,7 +64,7 @@ CUnit CUnit::streamIn(std::istream &is, int paren) {
     meaning = len_pc;
   if(u=="kpc")
     meaning = len_kpc;
-  if(u=="Mpc")
+  if(u=="mpc")
     meaning = len_mpc;
   if(u=="s")
     meaning = time_s;
