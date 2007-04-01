@@ -227,7 +227,7 @@ bool CTipsyFile::load() {
     cerr << "CTipsyFile: redshift = " << redshift << endl;
     om_m0 = 0.3;
     om_lam0 = 0.7;
-
+    boxSize = 1.0;
 
     string fname_HI = (string) fname + ".HI";
     ifstream file_HI(fname_HI.c_str());
