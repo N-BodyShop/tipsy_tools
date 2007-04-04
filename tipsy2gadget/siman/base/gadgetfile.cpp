@@ -448,6 +448,7 @@ void CGadgetFile::nativeWrite(CSimSnap *s, string filename) {
 
   bool cooling=true;
   bool metals=true;
+  bool stellar_age=true;
 
   // open file
 
@@ -525,6 +526,7 @@ void CGadgetFile::nativeWrite(CSimSnap *s, string filename) {
   header.OmegaLambda = s->getOmegaLambda0();
   header.flag_cooling = cooling;
   header.flag_metals = metals;
+  header.flag_stellarage = stellar_age;
 
   if(oneMassDM)
     header.mass[1] = massDM;
@@ -649,15 +651,84 @@ void CGadgetFile::nativeWrite(CSimSnap *s, string filename) {
 	sGas.releaseParticle(p);
       }
       file.write((char*)&sizefield,sizeof(int));
+
+      // XXX I'm guessing what this next Gadget field is.  TD's IDL
+      // script says "Nh"  --TRQ
+      file.write((char*)&sizefield,sizeof(int));
+      for(n=0; n<numGas; n++) {
+	p = sGas.getParticle(n);
+	file.write((char*)&(p->nHp),sizeof(float));
+	sGas.releaseParticle(p);
+      }
+      file.write((char*)&sizefield,sizeof(int));
+
+      file.write((char*)&sizefield,sizeof(int));
+      for(n=0; n<numGas; n++) {
+	p = sGas.getParticle(n);
+	file.write((char*)&(p->nHp),sizeof(float));
+	sGas.releaseParticle(p);
+      }
+      file.write((char*)&sizefield,sizeof(int));
+
+      // Smoothing length
+      file.write((char*)&sizefield,sizeof(int));
+      float *hsml = sGas.getArray("smoothlength");
+      if(hsml == NULL) {
+	  cerr << "WARNING: no smoothinglength" << endl;
+	  hsml = sGas.createArray("smoothlength", "SPH smoothing length");
+	  }
+      
+      for(n=0; n<numGas; n++) {
+	file.write((char*)&(hsml[n]),sizeof(float));
+      }
+      file.write((char*)&sizefield,sizeof(int));
+
+      // SFR
+      // XXX I assume this is star formation rate.  What is meant by
+      // this and what are its units?  --TRQ
+
+      file.write((char*)&sizefield,sizeof(int));
+      float *sfr = sGas.getArray("SFR");
+      if(sfr == NULL) {
+	  cerr << "WARNING: no SFR" << endl;
+	  sfr = sGas.createArray("SFR", "Star formation rate?");
+	  }
+      
+      for(n=0; n<numGas; n++) {
+	file.write((char*)&(sfr[n]),sizeof(float));
+      }
+      file.write((char*)&sizefield,sizeof(int));
     }
 
-     
+    // XXX How does gadget define ages? --TRQ
+    if(stellar_age) {
+	
+	sizefield = numStar*sizeof(float);
+	float *age = sStar.getArray("stellarage");
+	if(age == NULL) {
+	  cerr << "WARNING: no stellar age" << endl;
+	  age = sStar.createArray("stellarage", "Stellar Age");
+	  }
+	file.write((char*)&sizefield,sizeof(int));
+	for(n=0; n<numStar; n++) {
+	    file.write((char*)&(age[n]),sizeof(float));
+	    }
+	file.write((char*)&sizefield,sizeof(int));
+	}
+	
     if(metals) {
+	sizefield = (numGas+numStar)*sizeof(float);
+	
       file.write((char*)&sizefield,sizeof(int));
       for(n=0; n<numGas; n++) {
 	p = sGas.getParticle(n);
 	file.write((char*)&(p->metal),sizeof(float));
 	sGas.releaseParticle(p);
+      }
+      for(n=0; n<numStar; n++) {
+	p = sStar.getParticle(n);
+	file.write((char*)&(p->metal),sizeof(float));
+	sStar.releaseParticle(p);
       }
       file.write((char*)&sizefield,sizeof(int));
     } 
