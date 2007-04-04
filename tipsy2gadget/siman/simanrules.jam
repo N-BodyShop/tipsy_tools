@@ -1,0 +1,161 @@
+rule hasHeader 
+{
+	local s = $(<) ;
+	local t = $(>) ;
+	local found ;
+
+	if [ GLOB /usr/include/$(t) : $(s) ]
+	{
+		found = true ;
+	} else if [ GLOB /usr/local/include/$(t) : $(s) ]
+	{
+		found = true ;
+	}  else if [ GLOB $(CPLUS_INCLUDE_PATH)/$(t) : $(s) ]
+	{
+		found = true ;
+	} 
+	
+	if $(found) 
+	{
+	
+		return true ;
+	} else {
+		return ;
+	}
+	
+}
+
+rule hasLibrary
+{
+	local s = lib$(<).so* ;
+
+	local found ;
+
+	if [ GLOB /usr/lib : $(s) ]
+	{
+		found = true ;
+	} else if [ GLOB /usr/local/lib : $(s) ]
+	{
+		found = true ;
+	} else if [ GLOB /lib/ : $(s) ]
+	{
+		found = true ; 
+	} else if [ GLOB $(LD_LIBRARY_PATH) : $(s) ]
+	{
+		found = true ;
+	} 
+	
+	if $(found) 
+	{
+	
+		return true ;
+	} else {
+	
+		return ;
+	}
+	
+}
+
+
+
+
+if $(OS) = LINUX
+{
+	LIBRARY_ADD = <find-library>pthread 
+			$(LIBRARY_ADD)
+	;
+}
+
+
+if [ GLOB $(TOP)/ : extra.hpp ]
+{
+	echo Note: compiling with non-release extra libraries. ;
+	EXTRA_SIMAN = <lib>../extra/simanextra ;
+	EXTRA_SIMAN_DEF = $(EXTRA_SIMAN_DEF)
+			     <define>SIMAN_EXTRA=1 ;
+		
+}
+
+if [ hasHeader freeglut.h : GL ] & [ hasLibrary glut ]
+{
+
+	
+	EXTRA_SIMAN_DEF = $(EXTRA_SIMAN_DEF)
+			     <define>SIMAN_VIS=1 ;
+
+
+	LIBRARY_ADD = <find-library>glut 
+			$(LIBRARY_ADD) ;
+
+	echo Note: compiling with OpenGL support. ;
+
+} else {
+	echo Note: unable to find all OpenGL components; compiling without visualisation support. ;
+}
+
+if [ hasHeader readline.h : readline ] & [ hasLibrary readline ]
+{
+	EXTRA_SIMAN_DEF = $(EXTRA_SIMAN_DEF)
+			   <define>SIMAN_READLINE=1 ;
+	
+	LIBRARY_ADD = <find-library>readline
+			$(LIBRARY_ADD) ;
+
+	if [ hasLibrary ncurses ]
+	{
+		LIBRARY_ADD = <find-library>ncurses
+				$(LIBRARY_ADD) ;
+	}
+
+	echo Note: compiling with readline support. ;
+}
+
+if [ hasHeader CCfits : CCfits ] & [ hasLibrary CCfits ] 
+{
+	EXTRA_SIMAN_DEF = $(EXTRA_SIMAN_DEF)
+			  <define>SIMAN_FITS=1 ;
+
+	LIBRARY_ADD = <find-library>CCfits
+			$(LIBRARY_ADD) ;
+
+	echo Note: compiling with FITS support. ;
+}
+
+
+if [ hasHeader png.h : / ] & [ hasLibrary png ]
+{
+	EXTRA_SIMAN_DEF = $(EXTRA_SIMAN_DEF)
+		       <define>SIMAN_PNG=1 ;
+	
+	LIBRARY_ADD = <find-library>png
+			$(LIBRARY_ADD) ;
+
+	echo Note: compiling with PNG support. ;
+} 
+
+
+else if [ hasHeader tiffio.h : / ] & [ hasLibrary tiff ]
+{
+	EXTRA_SIMAN_DEF = $(EXTRA_SIMAN_DEF)	
+			<define>SIMAN_TIF=1 ;
+
+	LIBRARY_ADD = <find-library>tiff
+			$(LIBRARY_ADD) ;
+
+	echo Note: compiling with TIFF support. ;
+
+	
+}
+
+if intel-linux in $(TOOLS)
+{
+	echo Note: trying OpenMP ;
+	LIBRARY_ADD = <threading>multi
+	              $(LIBRARY_ADD) ;
+	EXTRA_SIMAN_DEF = $(EXTRA_SIMAN_DEF) 
+			<define>SIMAN_OMP=1 ;
+}
+
+
+SIMAN_LOCATE ?= $(TOP)/install/ ;
+

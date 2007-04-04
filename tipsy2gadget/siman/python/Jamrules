@@ -1,0 +1,3 @@
+path-global BOOST_ROOT : /usr/include/boost/
+
+project boost : $(BOOST_ROOT) ;

@@ -1,0 +1,47 @@
+subproject progs ;
+
+import python ;
+
+import ../simanrules ;
+
+template siman-std :  
+
+
+:        <include>$(TOP)/../	
+	  $(EXTRA_SIMAN_DEF)
+	$(PYTHON_PROPERTIES)
+	<library-path>$(PYTHON_LIB_PATH)
+	<find-library>$(PYTHON_EMBEDDED_LIBRARY)
+	  <include>$(BOOST_ROOT)/ ;
+
+exe convsim
+	: <template>siman-std
+	  convsim.cpp 
+		<dll>../base/siman  
+;
+
+exe siman
+	: <template>siman-std
+	  siman.cpp
+	<dll>../base/siman
+	
+ ;
+
+exe visiman
+	: <template>siman-std 
+	  visiman.cpp
+	<dll>../base/siman  
+;
+
+exe testsiman
+	: <template>siman-std
+	test.cpp
+	<dll>../base/siman  
+;
+
+
+stage bin : <exe>visiman <exe>testsiman <exe>siman <exe>convsim  
+	: <tag><debug>"_debug"
+	  <locate>$(SIMAN_LOCATE) 
+	:  debug ;
+

@@ -1,0 +1,20 @@
+subproject python ;
+
+import python ;
+import ../simanrules ;
+
+# SEARCH on python.jam = $(BOOST_BUILD_PATH) ;
+# include python.jam ;
+
+extension siman
+:	python.cpp
+	<template>@boost/libs/python/build/extension
+	<dll>../base/siman
+:	 <include>$(TOP)/../	
+	 $(EXTRA_SIMAN_DEF)
+	 <include>$(BOOST_ROOT)/ 
+	<define>SIMAN_COMPILING_LIBRARY=1
+
+	;
+
+	
