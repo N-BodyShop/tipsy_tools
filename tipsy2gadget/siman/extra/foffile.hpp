@@ -9,14 +9,16 @@
 #include "../base.hpp"
 #include "../extra.hpp"
 
-class CFoFFile: public CSubsets {
+using namespace siman;
+
+class FoFFile: public Subsets {
 
 public:
 
-  CFoFFile(char *path, char *snapshot_name, int snap_id);
-  virtual ~CFoFFile();
+  FoFFile(SimSnap *snap, char *path, char *snapshot_name, int snap_id);
+  virtual ~FoFFile();
 
-  virtual int getGroupParticleList(int groupID,int **particlearray);
+  virtual void getGroupParticleList(int groupID,std::vector<unsigned int> &particles);
 
   virtual int getGroupParticleLen(int groupID);
 

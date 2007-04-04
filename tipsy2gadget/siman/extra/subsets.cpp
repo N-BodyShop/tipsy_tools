@@ -9,34 +9,42 @@
 #include "../base.hpp"
 #include "../extra.hpp"
 
-#define VIRTUALONLY(s) std::cerr << "CSubsets: Base class erroneously called for virtual method " << s
+#define VIRTUALONLY(s) std::cerr << "Subsets: Base class erroneously called for virtual method " << s
 
-int CSubsets::getGroupParticleList(int groupID, int **particlearray) {
+Subsets::Subsets(SimSnap *snap) : snap(snap) { }
+
+void Subsets::getGroupParticleList(int groupID, vector<unsigned int> & particlearray) {
   VIRTUALONLY("getGroupParticleList");
-  return 0;
 }
 
-void CSubsets::getGroupCentre(int groupID, float* cx, float* cy, float *cz) {
+void Subsets::getGroupCentre(int groupID, float* cx, float* cy, float *cz) {
   VIRTUALONLY("getGroupCentre");
 }
 
+unsigned int Subsets::getNumGroups() const {
+  VIRTUALONLY("getNumGroups");
+  return 0;
+}
 
-auto_ptr<CSimSnap> CSubsets::getGroup(const CSimSnap & simulation, int haloid) {
+auto_ptr<SimSnap> Subsets::getGroup(int haloid) {
 
-  int *pTempRefs;
+  vector<unsigned int> tempRefs;
 
-  int nParticles = getGroupParticleList(haloid,&pTempRefs);
+
+  getGroupParticleList(haloid,tempRefs);
 
   // cheeky const_cast follows
   //
   // part of the larger problem of missing consts and 
   // pointers vs references throughout code
 
-  CSubset *ss = new CSubset(&(const_cast<CSimSnap&>(simulation)),nParticles,pTempRefs);
+  if(getVerbose()>3) 
+    cerr << "Subsets: construct group with " << tempRefs.size() << " ptcls" <<  endl;
 
-  delete[] pTempRefs;
+  Subset *ss = new Subset(snap,tempRefs);
+  
 
-  return auto_ptr<CSimSnap>(ss);
+  return auto_ptr<SimSnap>(ss);
 
 
   /* OLD CODE FOLLOWS
@@ -49,10 +57,10 @@ auto_ptr<CSimSnap> CSubsets::getGroup(const CSimSnap & simulation, int haloid) {
   
   float BoxSize = simulation->getBoxSize();
 
-  pParticles= new CParticle[nParticles]();
+  pParticles= new Particle[nParticles]();
 
   for(int n=0;n<nParticles;n++) {
-    CParticle *temp = simulation->getParticle(particle_list[n]);
+    Particle *temp = simulation->getParticle(particle_list[n]);
 
     // copy data into our own array
     pParticles[n] = *temp;
@@ -86,7 +94,7 @@ auto_ptr<CSimSnap> CSubsets::getGroup(const CSimSnap & simulation, int haloid) {
   
 }
 
-int CSubsets::getGroupParticleLen(int groupID)
+int Subsets::getGroupParticleLen(int groupID)
 {
   VIRTUALONLY("getGroupParticleLen");
   return 0;

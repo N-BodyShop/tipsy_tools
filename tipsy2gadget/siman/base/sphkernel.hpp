@@ -1,34 +1,51 @@
+// sphkernel.hpp - part of SimAn Simulation Analysis Library
 //
-// This file is part of SimAn
 //
-// Copyright (c) 2005-6 Andrew Pontzen
-// SimAn may not (currently) be used in any form without
-// prior permission. Please contact app26 (at) ast (dot) cam...
-// with all enquiries
+// Copyright (c) Andrew Pontzen 2005, 2006
 //
-// SPH kernel classes
+// SimAn is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// SimAn is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public Licence for more details.
+//
+// You should have received a copy of the GNU General Public Licence
+// along with SimAn; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+
+
+
+
+
 
 // used to represent different SPH kernels
 
 #ifndef __SPHKERNEL_H_INCLUDED
 
 #define __SPHKERNEL_H_INCLUDED
+
+namespace siman {
 	
-class CSPHKernel {
+class SPHKernel {
 public:
   virtual float operator()(float r, float h) const;
-
+  virtual ~SPHKernel() { }
 };
 
-class CSPHSquareKernel : public CSPHKernel {
+class SPHSquareKernel : public SPHKernel {
 public:
   virtual float operator()(float r, float h) const;
 };
 
-class CSPHProjectionKernel : public CSPHKernel {
+class SPHProjectionKernel : public SPHKernel {
 public:
-  CSPHProjectionKernel(const CSPHKernel &from);
-  ~CSPHProjectionKernel();
+  SPHProjectionKernel(const SPHKernel &from);
+  virtual ~SPHProjectionKernel();
   virtual float operator()(float r, float h) const;
   
 private:
@@ -36,5 +53,7 @@ private:
   int num_vals;
   float *pVals;
 };
+
+} // namespace siman
 
 #endif // SPHKERNEL_H_INCLUDED

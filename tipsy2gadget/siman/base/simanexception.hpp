@@ -1,87 +1,145 @@
+// simanexception.hpp - part of SimAn Simulation Analysis Library
 //
-// This file is part of SimAn
 //
-// Copyright (c) 2005-6 Andrew Pontzen
-// SimAn may not (currently) be used in any form without
-// prior permission. Please contact app26 (at) ast (dot) cam...
-// with all enquiries
+// Copyright (c) Andrew Pontzen 2005, 2006
 //
+// SimAn is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// SimAn is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public Licence for more details.
+//
+// You should have received a copy of the GNU General Public Licence
+// along with SimAn; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+
+
+
+
+
 #ifndef __SIMANEXCEPTION_H_INCLUDED
 
 #define __SIMANEXCEPTION_H_INCLUDED
 
-class CSimanException {
-public:
-  CSimanException();
-  virtual string getText();
-};
+namespace siman {
 
-class CUnknownCommand : public CSimanException {
-public:
-  std::string commandName;
-  CUnknownCommand(std::string command);
-  string getText();
+  class SimanException : public std::exception {
+  public:
+    ~SimanException() throw() { }; 
+    SimanException();
+    SimanException(const std::string & desc);
+    virtual std::string getText() const throw();
+    virtual const char* what() const throw();
+  private:
+    std::string d;
+  };
+
+  class ConvergenceFailure : public SimanException {
+  public:
+    ~ConvergenceFailure() throw() { };
+    ConvergenceFailure();
+    ConvergenceFailure(const std::string &desc);
+  };
+
+  class OutOfRange : public SimanException {
+  public:
+    ~OutOfRange() throw() { } ;
+    int n;
+    OutOfRange(int n);
+    std::string getText() const throw();
+  };
+
+  class UnknownCommand : public SimanException {
+  public:
+    ~UnknownCommand() throw() { }; 
+    std::string commandName;
+    UnknownCommand(std::string command);
+    std::string getText() const throw();
   
-};
+  };
 
-class CUnknownVariable : public CSimanException {
-public:
-  std::string variableName;
-  CUnknownVariable(std::string variable);
-  string getText();
-};
+  class MismatchedArrayLength : public SimanException {
+  public:
+    ~MismatchedArrayLength() throw() { };
+    MismatchedArrayLength() { };
+    std::string getText() const throw() { return "Mismatched array lengths"; };
+
+  };
+
+  class UnknownArray : public SimanException {
+  public:
+    ~UnknownArray() throw() { }; 
+    std::string variableName;
+    UnknownArray(std::string variable);
+    std::string getText() const throw();
+  };
 
 
-class CReadOnly : public CSimanException {
-public:
-  std::string variableName;
-  CReadOnly(std::string variable);
-  string getText();
-};
+  class ReadOnly : public SimanException {
+  public:
+    ~ReadOnly() throw() { }; 
+    std::string variableName;
+    ReadOnly(std::string variable);
+    std::string getText() const throw();
+  };
 
 
-class CTypeError : public CSimanException {
-public:
-  std::string variableName;
-  CTypeError(std::string variable);
-  string getText();
-};
+  class TypeError : public SimanException {
+  public:
+    ~TypeError() throw() { }; 
+    std::string variableName;
+    TypeError(std::string variable);
+    std::string getText() const throw();
+  };
 
-class CSyntaxError : public CSimanException {
-public:
-  CSyntaxError(string si="");
-  string getText();
-  string syntax;
-};
+  class SyntaxError : public SimanException {
+  public:
+    ~SyntaxError() throw() { }; 
+    SyntaxError(std::string si="");
+    std::string getText() const throw();
+    std::string syntax;
+  };
 
-class CFileError : public CSimanException {
-public:
-  CFileError(string fn);
-  string getText();
-  string fileName;
-};
+  class FileError : public SimanException {
+  public:
+    ~FileError() throw() { }; 
+    FileError(std::string fn);
+    std::string getText() const throw();
+    std::string fileName;
+  };
 
-class CUnitsError : public CSimanException {
-public:
-  CUnitsError(const units::CUnit & u1i, const units::CUnit &u2i);
-  string getText();
-  units::CUnit u1;
-  units::CUnit u2;
-};
+  class UnitsError : public SimanException {
+  public:
+    ~UnitsError() throw() { }; 
+    UnitsError(const Unit & u1i, const Unit &u2i);
+    std::string getText() const throw();
+    Unit u1;
+    Unit u2;
+  };
 
-class CUnknownUnit : public CSimanException {
-public:
-  CUnknownUnit();
-  string getText();
-};
+  class UnknownUnit : public SimanException {
+  public:
+    ~UnknownUnit() throw() { }; 
+    UnknownUnit(std::string name="");
+    std::string getText() const throw();
+    std::string n;
+  };
 
-class CMismatchedParenthesis : public CSimanException {
-public:
-  CMismatchedParenthesis(char type);
-  string getText();
-  char t;
-};
+  class MismatchedParenthesis : public SimanException {
+  public:
+    ~MismatchedParenthesis() throw() { }; 
+    MismatchedParenthesis(char type);
+    std::string getText() const throw();
+    char t;
+  };
 
-extern std::ostream & operator <<(std::ostream &os, CSimanException &e);
+  extern std::ostream & operator <<(std::ostream &os, SimanException &e);
+
+}
 
 #endif

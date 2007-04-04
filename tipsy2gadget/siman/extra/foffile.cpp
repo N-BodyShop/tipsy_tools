@@ -10,7 +10,7 @@
 #include "../extra.hpp"
 
 
-CFoFFile::CFoFFile(char *path, char *snapshot_name, int snapshot)
+FoFFile::FoFFile(SimSnap *snap_i, char *path, char *snapshot_name, int snapshot) : Subsets(snap_i)
 {  
   sprintf(fname_cat,  "%s/groups_catalogue/fof_special_catalogue_%03d", path, snapshot);
   sprintf(fname_list,  "%s/groups_indexlist/fof_special_indexlist_%03d", path, snapshot);
@@ -18,18 +18,18 @@ CFoFFile::CFoFFile(char *path, char *snapshot_name, int snapshot)
   load();
 }
 
-CFoFFile::~CFoFFile() {
+FoFFile::~FoFFile() {
 
 }
 
-void CFoFFile::load() {
+void FoFFile::load() {
  
   FILE *fh;
 
   // open file
 
   if(!(fh=fopen(fname_cat,"r"))) {
-    fprintf(stderr,"CFoFFile: failed to open cat file '%s'\n",fname_cat);
+    fprintf(stderr,"FoFFile: failed to open cat file '%s'\n",fname_cat);
     return;
   }
 
@@ -37,7 +37,7 @@ void CFoFFile::load() {
 
   fread(&n_groups,sizeof(int),1,fh);
 
-  std::cerr << "CFoFFile: allocating memory for " << n_groups << " groups...";
+  std::cerr << "FoFFile: allocating memory for " << n_groups << " groups...";
 
   // allocate memory
   group_offset =(int*) malloc(n_groups*sizeof(int));
@@ -57,7 +57,7 @@ void CFoFFile::load() {
 
 }
 
-int CFoFFile::getGroupParticleList(int group_id, int** particlearray) {
+void FoFFile::getGroupParticleList(int group_id, vector<unsigned int> & particles) {
 
   FILE *fh;
   
@@ -73,30 +73,30 @@ int CFoFFile::getGroupParticleList(int group_id, int** particlearray) {
 
   fseek(fh,sizeof(int) + group_offset[group_id]*4,SEEK_CUR);
 
-  *particlearray = (int*) malloc(group_len[group_id]*4);
+  int *particlearray = new int[group_len[group_id]];
 
-  fread(*particlearray,4,group_len[group_id],fh);
+  fread(particlearray,4,group_len[group_id],fh);
  
   // particle array from Volker Springel's fof_special is
   // 1-based, not 0-based!!
 
   for(int n=0;n<group_len[group_id];n++) {
-    (*particlearray)[n]-=1;
+    particles.push_back(particlearray[n]-1);
    }
   
   
+  delete[] particlearray;
 
-
-  // tidy up
+  
 
   fclose(fh);
 
   
-  return group_len[group_id];
+  
 
 }
 
-void CFoFFile::getGroupCentre(int group_id, float *cx, float *cy, float *cz) {
+void FoFFile::getGroupCentre(int group_id, float *cx, float *cy, float *cz) {
   
   *cx = group_com[3*group_id];
   *cy = group_com[3*group_id+1];
@@ -105,7 +105,7 @@ void CFoFFile::getGroupCentre(int group_id, float *cx, float *cy, float *cz) {
 }
 
 
-int CFoFFile::getGroupParticleLen(int group_id)
+int FoFFile::getGroupParticleLen(int group_id)
 {
   return group_len[group_id];
 }

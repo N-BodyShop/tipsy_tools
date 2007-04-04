@@ -10,9 +10,10 @@
 
 #define __IONISE_H_INCLUDED
 
-#include "../base.hpp"
 
-class CIonise {
+using namespace siman;
+
+class Ionise {
 
 public:
 
@@ -25,7 +26,7 @@ public:
   \param n_j - number of bins, i.e. length of array passed in pJ
   \param pSim - pointer to simulation on which to act    
   */
-  CIonise(float *pj,float nu_min, float nu_max, int n_j, CSimSnap *pSim);
+  Ionise(float *pj,float nu_min, float nu_max, int n_j, SimSnap *pSim);
 
   /** \brief Constructor with background J passed as normalisation and log slope
       
@@ -33,7 +34,7 @@ public:
   \param alpha - log slope
   \param pSim - pointer to simulation on which to act
   */
-  CIonise(double j21, double alpha, CSimSnap *pSim);
+  Ionise(double j21, double alpha, SimSnap *pSim);
 
 
   /** \brief Constructor with background J read in from data file
@@ -41,7 +42,7 @@ public:
   \param pSim - pointer to simulation on which to act
   \param z - redshift to load background J from; otherwise z will be determined from pSim
   */
-  CIonise(CSimSnap *pSim, float z=-1);
+  Ionise(SimSnap *pSim, float z=-1);
 
 
   /** \brief Constructor with background J passed in form of optically thin photo-ionisation gammas
@@ -51,16 +52,16 @@ public:
   \param gam_Hepg - photionisation gamma for singly ionised helium in s^-1
   \param pSim - pointer to simulation on which to act
 
-  Note that if a CIonise is constructed in this way, optically thick methods are not available, since
+  Note that if a Ionise is constructed in this way, optically thick methods are not available, since
   the spectrum is not constrained
   */
-  CIonise(double gam_Hg, double gam_Heg, double gam_Hepg, CSimSnap *pSim);
+  Ionise(double gam_Hg, double gam_Heg, double gam_Hepg, SimSnap *pSim);
 
-  /** \brief set a flag to control behaviour of CIonise
+  /** \brief set a flag to control behaviour of Ionise
    */
   void setFlag(const int flag);
 
-  /** \brief unset a flag to control behaviour of CIonise
+  /** \brief unset a flag to control behaviour of Ionise
    */
   void unsetFlag(const int flag);
 
@@ -83,6 +84,11 @@ public:
   double gamma_HeP_integrand(double nu);
   double gamma_He_integrand(double nu);
   
+  double coolingRate(double nden, double T, double ne, double nHI, double nHII, double nHeI, double nHeII, double nHeIII);
+  double heatingRate(double nden, double nHI, double nHeI, double nHeII, double epsHg, double epsHeg, double epsHePg);
+
+  void cooling();
+  
   double j21;
   double alpha;
   float nu_min; ///< minimum nu in eV
@@ -102,6 +108,9 @@ public:
   double gammaHg;
   double gammaHeg;
   double gammaHePg;
+  double epsilonHg;
+  double epsilonHeg;
+  double epsilonHePg;
 
   
   // flags:
@@ -117,9 +126,11 @@ private:
   static const int initJArray = 4;
   //@}
 
+  void propogateMeanTaus(Grid* pGrid);
+
 public:
   /// \defgroup Flags
-  /// Flags which effect operation of CIonise
+  /// Flags which effect operation of Ionise
   //@{
   /// \defgroup PubFlags Public Available Flags:
   /// public flags which can be changed
@@ -147,27 +158,30 @@ public:
   //@}
   //@}
 
-  double electronFraction(CParticle *p);
-  double electronDensity(CParticle *p);
+  double electronFraction(Particle *p);
+  double electronDensity(Particle *p);
 
-  void calculateFractions(CParticle *p, double &nH0, double &nHe0, double &nHp, double &nHep, double &nHepp, double &ne, double local_gammaHg=0, double local_gammaHeg =0, double local_gammaHePg=0) ;
+  void calculateFractions(Particle *p, double &nH0, double &nHe0, double &nHp, double &nHep, double &nHepp, double &ne);
+  void calculateFractions(Particle *p, double &nH0, double &nHe0, double &nHp, double &nHep, double &nHepp, double &ne, double local_gammaHg, double local_gammaHeg , double local_gammaHePg) ;
   
 
-  void thinRadiative(CSimSnap *pSim);
-  void thickRadiative(CGrid *pGrid);
-  void thickPPRadiative(CSimSnap *pSimSnap);
+  void thinRadiative();
+  void haehneltRadiative();
+  void thickRadiative(Grid *pGrid);
+  void thickPPRadiative(SimSnap *pSimSnap);
 
   static float quickNegExp(float ex); //!< returns very rough approximation to exp(ex) for ex<0  
 private:
   
   //! stores pointer to J array
-  /// @see CIonise()
+  /// @see Ionise()
   float *pJ;
 
-  CSimSnap *pSim; ///< stores pointer to simulation on which we are to act
+
+  SimSnap *pSim; ///< stores pointer to simulation on which we are to act
 
 
-  void calculateFractionsAtT(CParticle *p, double &nH0, double &nHe0, double &nHp, double &nHep, double &nHepp, double &ne, double local_gammaHg=0, double local_gammaHeg =0, double local_gammaHePg=0); //!< called internally - iteratively if finding correct temp for given U, or just once if flag useTemp is set
+  void calculateFractionsAtT(Particle *p, double &nH0, double &nHe0, double &nHp, double &nHep, double &nHepp, double &ne, double local_gammaHg=0, double local_gammaHeg =0, double local_gammaHePg=0); //!< called internally - iteratively if finding correct temp for given U, or just once if flag useTemp is set
 
 };
 

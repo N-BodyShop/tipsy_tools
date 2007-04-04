@@ -1,11 +1,27 @@
+// geometry.hpp - part of SimAn Simulation Analysis Library
 //
-// This file is part of SimAn
 //
-// Copyright (c) 2005-6 Andrew Pontzen
-// SimAn may not (currently) be used in any form without
-// prior permission. Please contact app26 (at) ast (dot) cam...
-// with all enquiries
+// Copyright (c) Andrew Pontzen 2005, 2006
 //
+// SimAn is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// SimAn is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public Licence for more details.
+//
+// You should have received a copy of the GNU General Public Licence
+// along with SimAn; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+
+
+
+
+
 #ifndef __GEOMETRY_H_INCLUDED
 
 #define __GEOMETRY_H_INCLUDED
@@ -14,11 +30,13 @@
 #include "simsnap.hpp"
 #include "particle.hpp"
 
-class CGeometry
+namespace siman {
+
+class Geometry
 {
 public: 
   
-  CGeometry(CSimSnap *parentSimIn);
+  Geometry(SimSnap *parentSimIn);
   
   void reCentre(float cxi, float cyi, float czi);
   void reCentreVel(float cvxi, float cvyi, float cvzi);
@@ -47,9 +65,11 @@ private:
   float rx, ry, rz;
   float cvx, cvy, cvz;
 
-  CSimSnap *pData;
+  SimSnap *pData;
   
 };
+
+}
 
 #endif
 

@@ -1,52 +1,65 @@
 CODING JOBS:
 
-* Why is parallel CIonise::thickRadiative() not working properly?
-* Implement better units reading
-* Scripting - decide on mechanism and sort it
+
 
 DATA:
 
-* UV normalization was done quickly. Need to sort out x-sections
-in CIonise then RECALCULATE data/UVNORM
 
 
 SCIENCE:
 
-* Correct through-put of redshift from CTipsyFile etc.
-* Milky way 1024/512 comparison at various redshifts
-* Mark particles contributing to DLA at various redshifts and pass
-  to Alyson
-* 
 
-CALLIBRATION & CHECKING:
 
-* Think of some CLOUDY comparison tests
-* See what effect changing grid resolution and region size has
-  (guessing the latter could be more important at higher z)
-* 
+
 
 INSTALLATION:
 
-Current chain of commands:
+Sort out jamfile to be good and proper :)
 
-aclocal
-automake -a
-libtoolize
-autoconf
-automake
-make
+READING:
 
- - a little long? 
+Emma's thesis intro for background? (see webpage)
+Max's Project: Cooke, J - Spectroscopic selection... , ApJ 2005 621 596
+"Stellar Masses and Star Formation Histories of Galaxies at z~6..."
+  a-ph/0604554
+In Buyle 2006 - Nagashima & Yoshii semi-analytic model for HI/B relation
+
+After Discussion with Emma re HI/B relation - 
+	Allen 2002/3
+
+
+HI at Z=0:
+
+* Andrew West PhD thesis - Julianne Dalcanton's Student - HI/mgal relation
+* Stacey McGough (?)
+
+
 
 CORE PROJECT REMINDER:
 
 *Is a forming MW-like galaxy a typical DLA?*
 
-1. Do galaxies have a sensible HI distribution at z=0
-2. Where was HI currently in the disk at earlier times
+1. Do galaxies have a sensible HI distribution at z=0 - NO!
+
+2. Where was HI currently in the disk at earlier times?
 3. Column density/impact parameter at high z
 4. Kinematic properties (requires metallicities!)
 
 Side-questions (technical)
 
 a. How accurate does the RT need to be?
+b. Dust absorption
+c. Metals
+
+OBS POINTS:
+
+Use Schechter fn to understand whether there *could* be a correlation
+between MHI and Magnitude.
+
+
+IF CONTINUING AT ANY POINT WITH THICK RADIATIVE:
+
+
+* Think of some CLOUDY comparison tests
+* See what effect changing grid resolution and region size has
+  (guessing the latter could be more important at higher z)

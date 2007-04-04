@@ -1,14 +1,27 @@
+// scripted.hpp - part of SimAn Simulation Analysis Library
 //
-// This file is part of SimAn
 //
-// Copyright (c) 2005-6 Andrew Pontzen
-// SimAn may not (currently) be used in any form without
-// prior permission. Please contact app26 (at) ast (dot) cam...
-// with all enquiries
+// Copyright (c) Andrew Pontzen 2005, 2006
 //
-// CScripted
+// SimAn is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
 //
-// A basic macro language, e.g. to describe file subsets
+// SimAn is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public Licence for more details.
+//
+// You should have received a copy of the GNU General Public Licence
+// along with SimAn; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+
+
+
+
+
 
 
 #ifndef __SCRIPTED_H_INCLUDED
@@ -16,11 +29,14 @@
 #define __SCRIPTED_H_INCLUDED
 
 
+
 #include "simsnap.hpp"
 #include "particle.hpp"
 #include "subset.hpp"
 #include "geometry.hpp"
 #include "union.hpp"
+
+#include <boost/python.hpp>
 
 #include <string>
 #include <stack>
@@ -31,87 +47,54 @@
 #include <sstream>
 #include <map>
 
-using namespace std;
+namespace siman {
 
 
-
-class CScripted : public CSimanObject {
+class Scripted : public SimanObject {
+  friend class Config;
  public:
 
-  /// Default constructor, loads a script with given filename and executes each line through dispatch().
-  CScripted(string filename, bool noInteractivity=false);
-  CScripted();
+  /// Default constructor, loads a script with given filename
+  Scripted(std::string filename, bool noInteractivity=false);
+  Scripted();
 
-  ~CScripted();
-
-  string className();
-
-  /// run command given by string, with optional parameters to be streamed in
-  ///
-  /// @param command = full line command
-  CSimanObject * doCommand(string command);  
- 
-  void infoVars();
-
-  CSimanObject *getReturnValue();
-
-  /// stores details of object so it may be garbage-collected later
-  /// @param pPush = pointer to object to push
-  void haveCreatedObj(CSimanObject* pPush);
-
-  /// removes details of object so no attempt to delete it is made later
-  /// @param pDel = pointer to object to delete
-  void haveDeletedObj(CSimanObject *pDel);
-
-  /// get a named variable
-  /// @param name - name of variable
-  /// @param require - set to require ability to cast (see @ref class_type_flags); if set to 0, returns object regardless of its type
-  /// @throw CUnknownVariable if the named variable is not found
-  /// @throw CTypeError if the variable is found but cannot be cast according to require
-  CSimanObject* getNamedVar(string name, unsigned int require=0);
-
-  /// read from a stream, like >>, but returns things between quotes in one go
-  static string readQuoted(istream &is);
-
-  /// set a named variable
-  /// @param name - name of variable
-  /// @param var - pointer to object to associate with name
-  /// @throw CUnknownVariable if a suitable path to the named variable is not found
-  /// @throw CTypeError if the variable should not be associated with the object given
-  void setNamedVar(string name, CSimanObject *var);
-
-
-  /// erase a named variable
-  /// @param name - name of variable
-  /// @throw CUnknownVariable if a suitable path to the named variable is not found
-  void eraseNamedVar(string name);
-
-  /// split a string according to some delimiter
-  /// @param[in] input - input string
-  /// @param[in] delim - delimiter string separating requried output
-  /// @param[out] results - vector of resulting strings 
-  void splitString(const string &input, const char &delim, vector<string> &results);
-
-  /// garbage collector
-  int gc();
-  bool deleteSafe(CSimanObject *pOj);
+  virtual ~Scripted();
 
   void pollStdIn();
   void mainLoop();
+  
+  void doCommand(std::string com);
+
+  /// Take a SimanObject, load it into the interpreter,
+  /// and make the interpreter do lifetime management (i.e.
+  /// the interpreter will delete the object when it is
+  /// no longer referenced by the interpreter.)
+  void injectAndManage(std::string varname, SimanObject * pObj);
+
+  /// Take a SimanObject, load it into the interpreter as
+  /// variable name "varname" as a reference only. (i.e.
+  /// the interperter is not allowed to delete the object
+  /// if it becomes dereferenced).
+  void injectAsReference(std::string varname, SimanObject & obj);
+
+  SimanObject *getReturnValue();
+  
  private:
 
+
+  static void initPython();
+  static void deInitPython();
   
+  SimanObject *pRetVal;
+
+  static boost::python::object main_namespace;
+  static boost::python::object main_module;
 
   bool load(bool noInteractivity);
 
-  set<CSimanObject* > createdObjs;
- 
-  map<string,CSimanObject*> namedStates;
-
-  CSimanObject *pRetVal;
-
-  string filename;
-
+  std::string filename;
+  
 };
 
+}
 #endif

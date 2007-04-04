@@ -1,52 +1,72 @@
-//
-// This file is part of SimAn
-//
-// Copyright (c) 2005-6 Andrew Pontzen
-// SimAn may not (currently) be used in any form without
-// prior permission. Please contact app26 (at) ast (dot) cam...
-// with all enquiries
+// rational.cpp - part of SimAn Simulation Analysis Library
 //
 //
+// Copyright (c) Andrew Pontzen 2005, 2006
+//
+// SimAn is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// SimAn is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public Licence for more details.
+//
+// You should have received a copy of the GNU General Public Licence
+// along with SimAn; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+
+
+
+
+
+
+
+
 
 #include "siman.hpp"
 
-CRational::CRational() : p(0), q(1) {
+namespace siman {
+
+Rational::Rational() : p(0), q(1) {
 
 }
 
 
-CRational::CRational(int n) : p(n), q(1) {
+Rational::Rational(int n) : p(n), q(1) {
 
 }
 
-CRational::CRational(int n, int d) : p(n), q(d) {
-
+Rational::Rational(int n, int d) : p(n), q(d) {
+  rationalize();
 }
 
-float CRational::flt() const {
+float Rational::flt() const {
   return ((float)p/(float)q);
 }
 
 
-double CRational::dbl() const {
+double Rational::dbl() const {
   return ((double)p/(double)q);
 }
 
-int CRational::int_part() const {
+int Rational::int_part() const {
   return (int) flt();
 }
 
-float CRational::flt_part() const {
+float Rational::flt_part() const {
   return flt() - (float) int_part();
 }
 
 
-double CRational::dbl_part() const {
+double Rational::dbl_part() const {
   return dbl() - (double) int_part();
 }
 
 
-void CRational::rationalize() {
+void Rational::rationalize() {
   if(p==0) {
     q=1;
     return;
@@ -66,8 +86,8 @@ void CRational::rationalize() {
   }
 }
 
-CRational CRational::operator+(const CRational &a) const {
-  CRational out;
+Rational Rational::operator+(const Rational &a) const {
+  Rational out;
   out.p=p*a.q+q*a.p;
   out.q=q*a.q;
   out.rationalize();
@@ -75,23 +95,23 @@ CRational CRational::operator+(const CRational &a) const {
 }
 
 
-CRational CRational::operator-(const CRational &a) const {
-  CRational out;
+Rational Rational::operator-(const Rational &a) const {
+  Rational out;
   out.p=p*a.q-q*a.p;
   out.q=q*a.q;
   out.rationalize();
   return out;
 }
 
-CRational CRational::operator-() const {
-  CRational out;
+Rational Rational::operator-() const {
+  Rational out;
   out.p=-p;
   out.q=q;
   return out;
 }
 
-CRational CRational::operator*(const CRational &a) const {
-  CRational out;
+Rational Rational::operator*(const Rational &a) const {
+  Rational out;
   out.p=p*a.p;
   out.q=q*a.q;
   out.rationalize();
@@ -99,49 +119,49 @@ CRational CRational::operator*(const CRational &a) const {
 }
 
 
-CRational CRational::operator/(const CRational &a) const {
-  CRational out;
+Rational Rational::operator/(const Rational &a) const {
+  Rational out;
   out.p=p*a.q;
   out.q=q*a.p;
   out.rationalize();
   return out;
 }
 
-void CRational::operator*=(const CRational &a) {
+void Rational::operator*=(const Rational &a) {
   p*=a.p;
   q*=a.q;
   rationalize();
 }
 
 
-void CRational::operator+=(const CRational &a) {
+void Rational::operator+=(const Rational &a) {
   p=p*a.q + a.p*q;
   q*=a.q;
   rationalize();
 }
 
 
-void CRational::operator-=(const CRational &a) {
+void Rational::operator-=(const Rational &a) {
   p=p*a.q - a.p*q;
   q*=a.q;
   rationalize();
 }
 
-void CRational::operator=(const CRational &c) {
+void Rational::operator=(const Rational &c) {
   p=c.p;
   q=c.q;
 }
 
-bool CRational::operator==(const CRational &e) const {
+bool Rational::operator==(const Rational &e) const {
   return ((e.p==p) && (e.q==q));
 }
 
-bool CRational::operator!=(const CRational &e) const {
+bool Rational::operator!=(const Rational &e) const {
   return ((e.p!=p) || (e.q!=q));
 }
 
 
-int CRational::gcd(int a, int b) {
+int Rational::gcd(int a, int b) {
   if(a<0) a=-a;
   if(b<0) b=-b;
 
@@ -158,13 +178,13 @@ int CRational::gcd(int a, int b) {
 }
 
 
-CRational::CRational(string s) {
+Rational::Rational(string s) {
    
   fromString(s);
 
 }
 
-void CRational::fromString(string s) {
+void Rational::fromString(string s) {
   
   string::size_type pos_div = s.find("/",0);
    
@@ -179,7 +199,13 @@ void CRational::fromString(string s) {
   rationalize();
 }
 
-std::istream & operator>>(std::istream &is, CRational &in) {
+  string Rational::toString() {
+    ostringstream s;
+    s << (*this);
+    return s.str();
+  }
+
+std::istream & operator>>(std::istream &is, Rational &in) {
   string s;
   is >> s;
  
@@ -188,7 +214,7 @@ std::istream & operator>>(std::istream &is, CRational &in) {
   return is;
 }
 
-std::ostream & operator<<(std::ostream &os, const CRational &out) {
+std::ostream & operator<<(std::ostream &os, const Rational &out) {
   if(out.q!=1) 
     os << out.p << "/" << out.q;
   else
@@ -196,6 +222,8 @@ std::ostream & operator<<(std::ostream &os, const CRational &out) {
   return os;
 }
 
-CRational operator*(int a, CRational b) {
-  return b*a; // uses implicit constructor CRational(a);
+Rational operator*(int a, Rational b) {
+  return b*a; // uses implicit constructor Rational(a);
 }
+
+} // namespace siman

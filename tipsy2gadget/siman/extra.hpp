@@ -13,5 +13,6 @@
 #include "extra/ionise.hpp"
 #include "extra/subsets.hpp"
 #include "extra/foffile.hpp"
+#include "extra/grpfile.hpp"
 
 #endif

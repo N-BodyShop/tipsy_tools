@@ -1,232 +1,243 @@
+// columngrid.cpp - part of SimAn Simulation Analysis Library
 //
-// This file is part of SimAn
 //
-// Copyright (c) 2005-6 Andrew Pontzen
-// SimAn may not (currently) be used in any form without
-// prior permission. Please contact app26 (at) ast (dot) cam...
-// with all enquiries
+// Copyright (c) Andrew Pontzen 2005, 2006
 //
+// SimAn is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// SimAn is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public Licence for more details.
+//
+// You should have received a copy of the GNU General Public Licence
+// along with SimAn; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+
+
+
+
+
+
+
+
 #include "siman.hpp"
 
+namespace siman {
 
-
-//
-// CColumnGrid
-//
-
-
-
-CColumnGrid::CColumnGrid(CSimSnap *parentSim, float x1i, float x2, int nxi, float y1i, float y2, int nyi, bool autoAssign) {
+  ColumnGrid::ColumnGrid(SimSnap &parentSim, float x1i, float x2, int nxi, float y1i, float y2, int nyi, bool autoAssign) {
   
-  x1 = x1i;
-  y1 = y1i;
+    x1 = x1i;
+    y1 = y1i;
 
-  nx = nxi;
-  ny = nyi;
+    nx = nxi;
+    ny = nyi;
 
-  pColumnLists = (CColumnList **) malloc(sizeof(void*) * nx);
+    pColumnLists = (ColumnList **) malloc(sizeof(void*) * nx);
 
-  dx = (x2-x1)/(float)nx;
-  dy = (y2-y1)/(float)ny;
+    dx = (x2-x1)/(float)nx;
+    dy = (y2-y1)/(float)ny;
 
-  for(int n=0;n<nx;n++) {
-    float cur_x = n * dx + x1;
+    for(int n=0;n<nx;n++) {
     
-    pColumnLists[n] = new CColumnList(parentSim, y1, y2, ny, false);
-    // final parameter prevents assignment of particles, which we 
-    // do ourselves later on...
-  }
+      pColumnLists[n] = new ColumnList(parentSim, y1, y2, ny, false);
+      // final parameter prevents assignment of particles, which we 
+      // do ourselves later on...
+    }
 
-  int numParticles = parentSim->getNumParticles();
+    int numParticles = parentSim.getNumParticles();
 
-  if(autoAssign) {
-    for(int n=0;n<numParticles;n++) {
-      int x_ref,y_ref;
-      CParticle *particle = parentSim->getParticle(n);
+    if(autoAssign) {
+      for(int n=0;n<numParticles;n++) {
+	int x_ref,y_ref;
+	Particle *particle = parentSim.getParticle(n);
       
-      x_ref = (int) ((particle->x - x1)/dx); // always rounds down - good!
-      y_ref = (int) ((particle->y - y1)/dy); // ditto...
+	x_ref = (int) ((particle->x - x1)/dx); // always rounds down - good!
+	y_ref = (int) ((particle->y - y1)/dy); // ditto...
       
-      CSimSnap *pSnap;
+	SimSnap *pSnap;
       
-      if(x_ref>=0 && y_ref>=0 && x_ref<nx && y_ref<ny) {
+	if(x_ref>=0 && y_ref>=0 && x_ref<nx && y_ref<ny) {
 	
-	pSnap = ((*this)[x_ref][y_ref]);
+	  pSnap = &((*this)[x_ref][y_ref]);
 	
-	// this next bit is probably a bit naughty - actually, the dereferencing
-	// can return different child classes of CSimSnap. But at this
-	// stage in the construction, it should still be a CSubset.
-	pSnap->pushParticle(n);
+	  // this next bit is probably a bit naughty - actually, the dereferencing
+	  // can return different child classes of SimSnap. But at this
+	  // stage in the construction, it should still be a Subset.
+	  static_cast<Subset*>(pSnap)->pushParticle(n);
+	}
+      
+
       }
-      
-      parentSim->releaseParticle(particle);
     }
-  }
   
-}
-
-CColumnGrid::CColumnGrid() {
-  // only for use during construction of CTemp<CColumnGrid>...
-  pColumnLists = NULL;
-}
-
-
-double CColumnGrid::getColDen(float x, float y, double units, bool neutral) 
-{
-  int cx = (int)((x-x1)/dx);
-  int cy = (int)((y-y1)/dy);
-  return getColDen(cx,cy,units, neutral);
-
-}
-
-int CColumnGrid::addToUnion(int cx, int cy, int dist, int minpix, CUnion &u) {
-  int numPixelsAdded = 0;
-  
-  int minx = cx-dist;
-  int maxx=cx+dist;
-  if(minx<0) minx=0;
-  if(maxx>nx-1) maxx=nx-1;
-
-  for(int x=minx; x<=maxx; x++) {
-    if(cy-dist>=0) {
-      
-      u.add((*this)[x][cy-dist]);
-      numPixelsAdded++;
-     
-    }
-    if(cy+dist<ny) {
-     
-      u.add((*this)[x][cy+dist]);
-      numPixelsAdded++;
-     
-    }
   }
 
-  int miny = cy-dist+1;
-  int maxy = cy+dist-1;
-  if(miny<0) miny=0;
-  if(maxy>ny-1) maxy=ny-1;
 
-  for(int y=miny; y<=maxy; y++) {
-    if(cx-dist>=0) {
-      u.add((*this)[cx-dist][y]);
-      numPixelsAdded++;
+  double ColumnGrid::getColDen(float x, float y, string on_prop) 
+  {
+    int cx = (int)((x-x1)/dx);
+    int cy = (int)((y-y1)/dy);
+    return getColDen(cx,cy,on_prop);
+
+  }
+
+  int ColumnGrid::addToUnion(int cx, int cy, int dist, int minpix, Union &u) {
+    int numPixelsAdded = 0;
+  
+    int minx = cx-dist;
+    int maxx=cx+dist;
+    if(minx<0) minx=0;
+    if(maxx>nx-1) maxx=nx-1;
+
+    for(int x=minx; x<=maxx; x++) {
+      if(cy-dist>=0) {
+      
+	u.add(&((*this)[x][cy-dist]));
+	numPixelsAdded++;
+     
+      }
+      if(cy+dist<ny) {
+     
+	u.add(&((*this)[x][cy+dist]));
+	numPixelsAdded++;
+     
+      }
     }
-    if(cx+dist<nx) {
-      u.add((*this)[cx+dist][y]);
-      numPixelsAdded++;
+
+    int miny = cy-dist+1;
+    int maxy = cy+dist-1;
+    if(miny<0) miny=0;
+    if(maxy>ny-1) maxy=ny-1;
+
+    for(int y=miny; y<=maxy; y++) {
+      if(cx-dist>=0) {
+	u.add(&((*this)[cx-dist][y]));
+	numPixelsAdded++;
+      }
+      if(cx+dist<nx) {
+	u.add(&((*this)[cx+dist][y]));
+	numPixelsAdded++;
 	
+      }
     }
+
+    if(u.getNumParticles()<minpix)
+      return numPixelsAdded + addToUnion(cx,cy,dist+1,minpix,u);
+    else
+      return numPixelsAdded;
+
   }
 
-  if(u.getNumParticles()<minpix)
-    return numPixelsAdded + addToUnion(cx,cy,dist+1,minpix,u);
-  else
-    return numPixelsAdded;
-
-}
-
-double CColumnGrid::getColDen(int x, int y, double units, bool neutral) {
+  double ColumnGrid::getColDen(int x, int y, string on_prop) {
   
-  CSimSnap *s = (*this)[x][y];
-  CUnion u((*this)[x][y]);
+    SimSnap *s = &((*this)[x][y]);
+    Union u(s->getParent());
 
-  int totpixav = 1;
 
-  if(s->getNumParticles()<10) {
-    s= &u;
+
+    int totpixav = 1;
+
+    if(s->getNumParticles()<10) {
+      s= &u;
     
-    u.add((*this)[x][y]);
-    totpixav+=addToUnion(x,y,1,10,u);
+      u.add((*this)[x][y]);
+      totpixav+=addToUnion(x,y,1,10,u);
     
 
-    /*
-    if(x>0) {
-      totpixav++;
-      u.add((*this)[x-1][y]);
-      if(y>0) {
+      /*
+	if(x>0) {
+	totpixav++;
+	u.add((*this)[x-1][y]);
+	if(y>0) {
 	u.add((*this)[x-1][y-1]);
 	totpixav++;
-      }
-      if(y<ny-1) {
+	}
+	if(y<ny-1) {
 	u.add((*this)[x-1][y+1]);
 	totpixav++;
-      }
-    }
-    if(x<nx-1) {
-      totpixav++;
-      u.add((*this)[x+1][y]);
+	}
+	}
+	if(x<nx-1) {
+	totpixav++;
+	u.add((*this)[x+1][y]);
       
-      if(y>0) {
+	if(y>0) {
 	u.add((*this)[x+1][y-1]);
 	totpixav++;
-      }
-      if(y<ny-1) {
+	}
+	if(y<ny-1) {
 	u.add((*this)[x+1][y+1]);
 	totpixav++;
-      }
-    }
-    if(y>0) {
-      totpixav++;
-      u.add((*this)[x][y-1]);
-    }
-    if(y<ny-1) {
-      totpixav++;
-      u.add((*this)[x][y+1]);
-    }
+	}
+	}
+	if(y>0) {
+	totpixav++;
+	u.add((*this)[x][y-1]);
+	}
+	if(y<ny-1) {
+	totpixav++;
+	u.add((*this)[x][y+1]);
+	}
 
-    */
-  }
+      */
+    }
     
-  double area = dx * dy *totpixav;  // individual area of a pixel
-  float mass;
+    double area = dx * dy *totpixav;  // individual area of a pixel
+    
+    
+    float mass;
 
-  if(neutral) mass= s->getH0Mass();
-  else mass = s->getTotalMass();
   
-  double colden = ((double) (mass / area)) * units;
+    mass = s->getArray(on_prop).total();
   
-  if(colden>1)
-    return log(colden)/log(10.);
-  else
-    return 0.;
+    double colden = ((double) (mass / area));
+  
+   
+    return colden;
+    
 
-}
-
-
-float CColumnGrid::getDx() {
-  return dx;
-}
-
-float CColumnGrid::getDy() {
-  return dy;
-}
-
-void CColumnGrid::realize() {
-
-  // dereference initially passed simulation
-
-  for(int n=0;n<nx;n++) {
-    pColumnLists[n]->realize();
   }
-}
 
-CColumnGrid::~CColumnGrid() {
 
-  if(pColumnLists!=NULL) {
+  float ColumnGrid::getDx() {
+    return dx;
+  }
+
+  float ColumnGrid::getDy() {
+    return dy;
+  }
+
+  void ColumnGrid::realize() {
+
+    // dereference initially passed simulation
+
     for(int n=0;n<nx;n++) {
-      
-      delete pColumnLists[n];
+      pColumnLists[n]->realize();
     }
+  }
+
+  ColumnGrid::~ColumnGrid() {
+
+    if(pColumnLists!=NULL) {
+      for(int n=0;n<nx;n++) {
+      
+	delete pColumnLists[n];
+      }
     
 
-    free(pColumnLists);
+      free(pColumnLists);
 
-    pColumnLists = NULL;
+      pColumnLists = NULL;
+    }
   }
-}
 
-CTempColumnList CColumnGrid::operator[](int n) {
-  CTempColumnList r(pColumnLists[n]);
-  return r;
+  ColumnList & ColumnGrid::operator[](int n) {
+    return *(pColumnLists[n]);
+  }
+
 }

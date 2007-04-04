@@ -1,15 +1,35 @@
+// geometry.cpp - part of SimAn Simulation Analysis Library
 //
-// This file is part of SimAn
 //
-// Copyright (c) 2005-6 Andrew Pontzen
-// SimAn may not (currently) be used in any form without
-// prior permission. Please contact app26 (at) ast (dot) cam...
-// with all enquiries
+// Copyright (c) Andrew Pontzen 2005, 2006
 //
+// SimAn is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// SimAn is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public Licence for more details.
+//
+// You should have received a copy of the GNU General Public Licence
+// along with SimAn; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+
+
+
+
+
+
+
+
 #include "siman.hpp"
 
+namespace siman {
 
-CGeometry::CGeometry(CSimSnap *pSim)
+Geometry::Geometry(SimSnap *pSim)
 { 
   rx = 0;
   ry = 0;
@@ -22,8 +42,8 @@ CGeometry::CGeometry(CSimSnap *pSim)
   pData = pSim;
 }
 
-void CGeometry::applyToParticle(int n) {
-  CParticle *pParticle = pData->getParticle(n);
+void Geometry::applyToParticle(int n) {
+  Particle *pParticle = pData->getParticle(n);
   
 
   pParticle->x -=cx;
@@ -68,8 +88,8 @@ void CGeometry::applyToParticle(int n) {
 
 }
 
-void CGeometry::apply() {
-  cerr << "CGeometry: applying transformations...";
+void Geometry::apply() {
+  cerr << "Geometry: applying transformations...";
   unsigned int np = pData->getNumParticles();
   for(unsigned int n=0;n<np;n++) {
     applyToParticle(n);
@@ -77,40 +97,40 @@ void CGeometry::apply() {
   cerr << "done!" << endl;
 }
 
-void CGeometry::reCentre(float cxi, float cyi, float czi) {
+void Geometry::reCentre(float cxi, float cyi, float czi) {
   cx+= cxi;
   cy+= cyi;
   cz+= czi;
 }
 
-void CGeometry::reCentreVel(float cvxi, float cvyi, float cvzi) {
+void Geometry::reCentreVel(float cvxi, float cvyi, float cvzi) {
   cvx+= cvxi;
   cvy+= cvyi;
   cvz+= cvzi;
 }
 
 
-void CGeometry::setRotateX(float rxi) {
+void Geometry::setRotateX(float rxi) {
   rx = rxi;
   transform = true;
   updateTransformCoeffs();
 }
 
-void CGeometry::setRotateY(float ryi) {
+void Geometry::setRotateY(float ryi) {
   ry = ryi;
   
   transform = true;
   updateTransformCoeffs();
 }
 
-void CGeometry::setRotateZ(float rzi) {
+void Geometry::setRotateZ(float rzi) {
   rz = rzi;
   
   transform = true;
   updateTransformCoeffs();
 }
 
-void CGeometry::setRotate(float rxi, float ryi, float rzi) {
+void Geometry::setRotate(float rxi, float ryi, float rzi) {
   rx = rxi;
   ry = ryi;
   rz = rzi;
@@ -119,7 +139,7 @@ void CGeometry::setRotate(float rxi, float ryi, float rzi) {
   updateTransformCoeffs();
 }
 
-void CGeometry::setMatrix(float *mat) {
+void Geometry::setMatrix(float *mat) {
   transform=true;
   mxx = mat[0];
   mxy = mat[1];
@@ -132,7 +152,7 @@ void CGeometry::setMatrix(float *mat) {
   mzz = mat[8];
 }
 
-void CGeometry::updateTransformCoeffs() {
+void Geometry::updateTransformCoeffs() {
 
   mxx = cos(rz)*cos(ry); // cos(rz)*cos(ry) - sin(rx)*sin(ry)*sin(rz);
   mxy = sin(rz)*cos(rx)-sin(rx)*cos(rz)*sin(ry); // cos(rx)*sin(rz);
@@ -145,5 +165,7 @@ void CGeometry::updateTransformCoeffs() {
   mzx = -sin(ry); // -sin(ry)*cos(rz);
   mzy = -sin(rx)*cos(ry); // -sin(rx);
   mzz = cos(rx)*cos(ry);
+
+}
 
 }

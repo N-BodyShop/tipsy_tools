@@ -1,86 +1,106 @@
+// basesimsnap.hpp - part of SimAn Simulation Analysis Library
 //
-// This file is part of SimAn
 //
-// Copyright (c) 2005-6 Andrew Pontzen
-// SimAn may not (currently) be used in any form without
-// prior permission. Please contact app26 (at) ast (dot) cam...
-// with all enquiries
+// Copyright (c) Andrew Pontzen 2005, 2006
 //
-// CBaseSimSnap Class
+// SimAn is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
 //
-// Takes a copy of (possibly highly nested!) CSimSnaps, but stores
-// the data as actual CParticles which uses extra memory but may
-// lead to a huge speed increase for certain operations.
+// SimAn is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public Licence for more details.
+//
+// You should have received a copy of the GNU General Public Licence
+// along with SimAn; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-#ifndef __REALIZE_H_INCLUDED
-
-#define __REALIZE_H_INCLUDED
 
 
-class CBaseSimSnap : public CSimSnap {
+
+
+
+
+
+#ifndef __BASESIMSNAP_H_INCLUDED
+
+#define __BASESIMSNAP_H_INCLUDED
+
+namespace siman {
+
+class BaseSimSnap : public SimSnap {
 
 public:
-  CBaseSimSnap(CParticle **pParticleArray, int nParticles, units::CUnit length = units::CUnit(), units::CUnit mass = units::CUnit() );
-  CBaseSimSnap(CSimSnap *copySim);
-  CBaseSimSnap(std::string filename);
-  CBaseSimSnap();
+  BaseSimSnap(Particle **pParticleArray, int nParticles, Unit length = Unit(), Unit mass = Unit() );
+  BaseSimSnap(const SimSnap *copySim);
+  BaseSimSnap(std::string filename);
+  BaseSimSnap();
 
-  ~CBaseSimSnap();
+  virtual ~BaseSimSnap();
 
-  static CBaseSimSnap* makeSlab(unsigned int nParticles, float depth, float extent, float density, float temp, int gentype=genRandom, units::CUnit length = units::CUnit(), units::CUnit mass = units::CUnit() );
+  static BaseSimSnap* makeSlab(unsigned int nParticles, float depth, float extent, float density, float temp, int gentype=genRandom, Unit length = Unit(), Unit mass = Unit() );
 
-  virtual CParticle * getParticle(int id);
-  virtual void releaseParticle(CParticle *);
+  virtual Particle * getParticle(unsigned int id);
+  virtual const Particle * getConstParticle(unsigned int id) const;
+  virtual void releaseParticle(unsigned int id);
+
+  virtual void setupReservedArrays();
   
   virtual bool Load(bool fakeload=false);
-  virtual bool isLoaded();
   
-  virtual int getNumParticles();
+  virtual unsigned int getNumParticles() const;
 
-  virtual float getBoxSize();
-  virtual float getHubble();
-  virtual float getRedshift();
-  virtual float getOmegaM0();
-  virtual float getOmegaLambda0();
+  virtual float getBoxSize() const;
+  virtual float getHubble() const;
+  virtual float getRedshift() const;
+  virtual float getOmegaM0() const;
+  virtual float getOmegaLambda0() const;
 
   virtual void setHubble(float hubble);
   virtual void setBoxSize(float boxsize);
   virtual void setRedshift(float z);
+  virtual void setOmegaM0(float om0);
+  virtual void setOmegaLambda0(float ol0);
 
-  virtual void convertUnits(  units::CUnit distance = units::CUnit(), 
-			      units::CUnit mass = units::CUnit(), 
-			      units::CUnit velocity = units::CUnit(), 
-			      units::CUnit density = units::CUnit(), 
-			      units::CUnit energy = units::CUnit());
+  virtual void convertUnits(  Unit distance = Unit(), 
+			      Unit mass = Unit(), 
+			      Unit velocity = Unit(), 
+			      Unit density = Unit(), 
+			      Unit energy = Unit());
 
 
-  virtual int deReference(int i, int n=1);
-  
+  virtual int deReference(int i, int n=1) const;
+  virtual int deReference(int i, SimSnap * pObj) const;
   static const int genRandom = 1;
   static const int genGrid = 2;
   
 
-  static void nativeWrite(CSimSnap *sim, std::string filename);
+  static void nativeWrite(const SimSnap *sim, std::string filename);
 
   
   ///\ingroup ExtraData
   ///@{
-  virtual float *createArray(string name, string fullname, units::CUnit inunits = units::CUnit());
-  virtual void destroyArray(string name);
-  virtual float *getArray(string name);
-  virtual float *getArray(int n);
-  virtual string getArrayLongName(string name);
-  virtual string getArrayLongName(int n);
-  virtual string getArrayName(int n);
-  virtual units::CUnit getArrayUnits(string name);
-  virtual units::CUnit getArrayUnits(int n);
-  virtual int getNumArrays();
+  virtual SimanArray & createArray(std::string name, std::string fullname, Unit inunits = Unit());
+  virtual void destroyArray(std::string name);
+  virtual SimanArray & getArray(std::string name);
+  virtual SimanArray & getArray(int n);
+  virtual const SimanArray & getConstArray(std::string name) const;
+  virtual const SimanArray & getConstArray(int n) const;
+  virtual std::string getArrayLongName(std::string name) const;
+  virtual std::string getArrayLongName(int n) const;
+  virtual std::string getArrayName(int n) const;
+  virtual Unit getArrayUnits(std::string name) const;
+  virtual Unit getArrayUnits(int n) const;
+  virtual int getNumArrays() const;
+  virtual int getArrayIndex(std::string n) const;
   ///@}
 
 protected:
 
   void allocateMemory();
-  CParticle **pParticles;
+  Particle **pParticles;
   unsigned int numParticles;
     
   float boxSize;
@@ -92,12 +112,15 @@ protected:
       
   /// \ingroup ExtraData
   ///@{
-  map<string, float* > extraMap;
-  map<string, string> extraMapName;
-  map<string, units::CUnit> extraMapUnits;
+  std::map<std::string, SimanArray* > extraMap;
+  std::map<std::string, std::string> extraMapName;
+  std::list<std::map<std::string, SimanArray*>::iterator> extraList;
+  int extraMap_reserved_end;
   ///@}
 
 
 };
 
-#endif // _REALIZE_H_INCLUDED
+} // namespace siman
+
+#endif // __BASESIMSNAP_H_INCLUDED

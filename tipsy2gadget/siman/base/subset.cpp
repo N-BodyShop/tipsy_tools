@@ -1,105 +1,203 @@
+// subset.cpp - part of SimAn Simulation Analysis Library
 //
-// This file is part of SimAn
 //
-// Copyright (c) 2005-6 Andrew Pontzen
-// SimAn may not (currently) be used in any form without
-// prior permission. Please contact app26 (at) ast (dot) cam...
-// with all enquiries
+// Copyright (c) Andrew Pontzen 2005, 2006
 //
+// SimAn is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// SimAn is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public Licence for more details.
+//
+// You should have received a copy of the GNU General Public Licence
+// along with SimAn; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+
+
+
 #include "siman.hpp"
+#include <typeinfo>
+#include <boost/lexical_cast.hpp>
 
-// CSubset Implementation
+namespace siman {
 
-using namespace std;
+  // Subset Implementation
 
-CSubset::~CSubset() {
- 
-}
 
-CSubset::CSubset() {
-
-  pAutoParent = NULL;
-  nHaloID = -1;
-} 
-
-CSubset::CSubset(CSimSnap *simulation) {
-
-  // start off with NO particles!
-  pAutoParent = simulation;
-}
-
-CSubset::CSubset(CSimSnap *simulation,CFilter &filter) {
-  pAutoParent = simulation;
-  CParticle *consider;
-
-  for(int n=0;n<pAutoParent->getNumParticles();n++) {
-    CParticle *pParticle = simulation->getParticle(n);
-
-    if(filter.includes(*pParticle))
-      particleRefs.push_back(n);
-    
-    simulation->releaseParticle(pParticle);
+  Subset::~Subset() {
+#ifdef SIMAN_TRACE
+    cerr << "Subset::~Subset" << endl;
+#endif
+    map<SimanArray*,SimanArraySubscripted*>::iterator i;
+    for(i=createdReferencers.begin();i!=createdReferencers.end();i++) {
+      delete (*i).second;
+    }
   }
-}
 
-CSubset::CSubset(CSimSnap *simulation, int numParticles, int *pPartList) {
-  pAutoParent = simulation;
-  particleRefs.insert(particleRefs.end(),&pPartList[0],&pPartList[numParticles-1]);
-}
+  Subset::Subset() {
+
+#ifdef SIMAN_TRACE
+    cerr << "Subset::Subset" << endl; 
+#endif
+    pAutoParent = NULL;
+  } 
+ 
+  Subset::Subset(SimSnap *simulation) {
+
+    // start off with NO particles!
+    pAutoParent = simulation;
+  }
+
+  Subset::Subset(SimSnap &sim) {
+    pAutoParent = &sim;
+  }
+
+  Subset::Subset(SimSnap *simulation,const Filter &filter) {
+    pAutoParent = simulation;
+
+    for(unsigned int n=0;n<pAutoParent->getNumParticles();n++) {
+      const Particle *pParticle = simulation->getConstParticle(n);
+
+      if(filter.includes(*pParticle))
+	particleRefs.push_back(n);
+    
+
+    }
+  }
 
 
-string CSubset::className() {
-  return "CSubset";
-}
+  Subset::Subset(const SimSnap &simulation,const Filter &filter) {
 
-CSimSnap *CSubset::getParent() {
-  return pAutoParent;
-}
+    // const_cast - not particularly nice. We don't generally abuse this trust. The
+    // constructor needs to be like this for boost.python. Would be nice
+    // to sort this out, but it needs quite a bit of things doing.
 
-CSimanObject * CSubset::getMember(const string & member) {
-  if(member=="parent")
+    pAutoParent = const_cast<SimSnap*>(&simulation);
+
+    for(unsigned int n=0;n<pAutoParent->getNumParticles();n++) {
+      const Particle *pParticle = pAutoParent->getConstParticle(n);
+
+      if(filter.includes(*pParticle))
+	particleRefs.push_back(n);
+    
+
+    }
+  }
+
+  Subset::Subset(SimSnap *simulation, int numParticles, int *pPartList) {
+    pAutoParent = simulation;
+    particleRefs.insert(particleRefs.end(),&pPartList[0],&pPartList[numParticles-1]);
+  }
+
+  Subset::Subset(SimSnap *simulation, const vector<unsigned int> & particles) {
+    pAutoParent = simulation;
+    particleRefs = particles;
+  }
+
+  SimSnap *Subset::getParent() const {
     return pAutoParent;
+  }
 
-  return CSimSnap::getMember(member);
-}
+  unsigned int Subset::getNumParticles() const {
+    return particleRefs.size();
+  }
 
-int CSubset::getNumParticles() {
-  return particleRefs.size();
-}
+  void Subset::pushParticle(int n) {
+    particleRefs.push_back(n);
+  }
 
-void CSubset::cache() {
+  Particle* Subset::getParticle(unsigned int id) {
+#ifndef SIMAN_UNSAFE_FASTER
+    if(id>=getNumParticles())
+      throw(std::out_of_range(boost::lexical_cast<string>(id)));
+#endif
+
+    // could do checking of id, but a conditional may disturb pipelining
+    // so have not for now...
+
+    Particle* particle = pAutoParent->getParticle(particleRefs[id]);
   
-}
+    return particle;
 
-void CSubset::pushParticle(int n) {
-  particleRefs.push_back(n);
-}
+  }
 
-bool CSubset::isLoaded() {
-  return true;
-}
 
-CParticle* CSubset::getParticle(int id) {
+  const Particle* Subset::getConstParticle(unsigned int id) const {
+#ifndef SIMAN_UNSAFE_FASTER
+    if(id>=getNumParticles())
+      throw(std::out_of_range(boost::lexical_cast<string>(id)));
+#endif
+    return pAutoParent->getConstParticle(particleRefs[id]);
 
-  // could do checking of id, but a conditional may disturb pipelining
-  // so have not for now...
+  }
 
-  CParticle* particle = pAutoParent->getParticle(particleRefs[id]);
-  
-  return particle;
+  void Subset::releaseParticle(unsigned int id) {
+    
+    pAutoParent->releaseParticle(particleRefs[id]);
 
-}
+  }
 
-void CSubset::releaseParticle(CParticle *particle) {
-  // probably do nothing; should streamline this...
-  pAutoParent->releaseParticle(particle);
+  int Subset::deReference(int i, int n) const {
 
-}
+    if(n==1) 
+      return particleRefs[i];
+    else
+      return pAutoParent->deReference(particleRefs[i], n-1);
+  }
 
-int CSubset::deReference(int i, int n) {
 
-  if(n==1) 
-    return particleRefs[i];
-  else
-    return pAutoParent->deReference(particleRefs[i], n-1);
-}
+  int Subset::deReference(int i, SimSnap *pObj) const {
+    if(pObj==this)
+      return i;
+    else
+      return pAutoParent->deReference(particleRefs[i],pObj);
+
+  }
+
+  SimanArray & Subset::getSubscriptedArrayFor(SimanArray &parent) const {
+    if(createdReferencers.count(&parent)!=0)
+      return *(createdReferencers[&parent]);
+    else {
+      SimanArraySubscripted * subscriptedArr = 
+	new SimanArraySubscripted(parent,const_cast<Subset*>(this));
+      createdReferencers[&parent]=subscriptedArr;
+      return *subscriptedArr;
+    }
+  }
+
+
+  SimanArray & Subset::createArray(string name, string fullname, Unit arrunits) {
+    SimanArray & parentArray = pAutoParent->createArray(name,fullname,arrunits);
+
+    return getSubscriptedArrayFor(parentArray);
+
+  }
+
+  void Subset::destroyArray(string name) {
+    pAutoParent->destroyArray(name);
+    // currently does not destroy cached SimanArraySubscripted
+  }
+
+  SimanArray & Subset::getArray(string name) {
+    return getSubscriptedArrayFor(pAutoParent->getArray(name));
+  }
+
+  SimanArray & Subset::getArray(int n) {
+    return getSubscriptedArrayFor(pAutoParent->getArray(n));
+  }
+
+
+  SimanArray const & Subset::getConstArray(string name) const {
+    return getSubscriptedArrayFor(const_cast<SimanArray &>(pAutoParent->getConstArray(name)));
+  }
+
+  SimanArray const & Subset::getConstArray(int n) const {
+    return getSubscriptedArrayFor(const_cast<SimanArray &>(pAutoParent->getConstArray(n)));
+  }
+
+} // namespace siman

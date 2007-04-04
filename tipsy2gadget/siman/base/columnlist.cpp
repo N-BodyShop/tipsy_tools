@@ -1,85 +1,96 @@
+// columnlist.cpp - part of SimAn Simulation Analysis Library
 //
-// This file is part of SimAn
 //
-// Copyright (c) 2005-6 Andrew Pontzen
-// SimAn may not (currently) be used in any form without
-// prior permission. Please contact app26 (at) ast (dot) cam...
-// with all enquiries
+// Copyright (c) Andrew Pontzen 2005, 2006
 //
+// SimAn is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// SimAn is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public Licence for more details.
+//
+// You should have received a copy of the GNU General Public Licence
+// along with SimAn; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+
+
+
+
+
+
+
+
 #include "siman.hpp"
 
-// 
-// CColumnList
-//
+namespace siman {
 
-CColumnList::CColumnList(CSimSnap *parentSim, float x1, float x2, int nxi, bool autoAssign) {
+ColumnList::ColumnList(SimSnap &parentSim, float x1, float x2, int nxi, bool autoAssign) {
 
   nx = nxi;
 
-  pColumnContents = (CSimSnap **) malloc(sizeof(void*) * nx);
+  pColumnContents = (SimSnap **) malloc(sizeof(void*) * nx);
   
   dx = (x2-x1)/(float)nx;
     
   for(int n=0;n<nx;n++) {
 
-    pColumnContents[n] = new CSubset(parentSim);
+    pColumnContents[n] = new Subset(parentSim);
     
   }
 
   if(autoAssign) {
-    unsigned int numParticles = parentSim->getNumParticles();
-    for(int n=0;n<numParticles;n++) {
+    unsigned int numParticles = parentSim.getNumParticles();
+    for(unsigned int n=0;n<numParticles;n++) {
       int x_ref;
-      CParticle *particle = parentSim->getParticle(n);
+      Particle *particle = parentSim.getParticle(n);
       
       x_ref = (int) ((particle->x - x1)/dx);
       
       
-      CSimSnap *pSnap;
+      SimSnap *pSnap;
       
       if(x_ref>=0 && x_ref<nx) {
 	
-	pSnap = ((*this)[x_ref]);
+	pSnap = &((*this)[x_ref]);
 	
-	pSnap->pushParticle(n);
+	(static_cast<Subset*>(pSnap))->pushParticle(n);
       }
       
-      parentSim->releaseParticle(particle);
+
     }
   }
 }
 
-CColumnList::CColumnList() {
-  // only available to child classes, which is CTempColumnList...
-  // see grid.hpp for more information!
-  pColumnContents = NULL;
-}
-
-float CColumnList::power(float wavenumber) {
+float ColumnList::power(float wavenumber) {
   complex <float> sum;
   for(int n=0;n<nx;n++) {
-    float cellMass = (*this)[n]->getTotalMass();
+    float cellMass = (*this)[n].getTotalMass();
     complex <float> exponent(0,wavenumber*(float)n*dx);
     sum += cellMass * exp(exponent);
   }
 
-  return pow(abs(sum),2);
+  return std::pow(abs(sum),2);
 }
 
 
-void CColumnList::realize() {
+void ColumnList::realize() {
 
   // dereference initially passed simulation
 
   for(int n=0;n<nx;n++) {
-    CBaseSimSnap *pReal;
-    pReal = new CBaseSimSnap(pColumnContents[n]);
+    BaseSimSnap *pReal;
+    pReal = new BaseSimSnap(pColumnContents[n]);
     delete pColumnContents[n];
     pColumnContents[n] = pReal;
   }
 }
 
-CColumnList::~CColumnList() {
+ColumnList::~ColumnList() {
  
   if(pColumnContents!=NULL) {
     for(int n=0;n<nx;n++) {
@@ -90,7 +101,9 @@ CColumnList::~CColumnList() {
   }
 }
 
-CSimSnap * CColumnList::operator[](int n) {
+SimSnap & ColumnList::operator[](int n) {
 
-  return pColumnContents[n];
+  return *pColumnContents[n];
 }
+
+} // namespace siman

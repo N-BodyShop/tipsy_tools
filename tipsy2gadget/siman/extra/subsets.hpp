@@ -10,14 +10,22 @@
 
 #define __SUBSETS_H_INCLUDED
 
-class CSubsets {
+using namespace siman;
 
+class Subsets {
+
+protected:
+  Subsets(SimSnap *snap) ;
 public:
-  virtual int getGroupParticleList(int groupID, int **particlearray);
+  virtual unsigned int getNumGroups() const;
+  virtual void getGroupParticleList(int groupID, std::vector<unsigned int> &particles);
   virtual void getGroupCentre(int groupID, float *cx, float *cy, float *cz);
   virtual int getGroupParticleLen(int groupID);
-  auto_ptr<CSimSnap> getGroup(const CSimSnap & snap, int groupID);
-  
+  std::auto_ptr<SimSnap> getGroup( int groupID);
+  virtual ~Subsets() { } ;
+
+protected:
+  SimSnap *snap;
   
 };
 

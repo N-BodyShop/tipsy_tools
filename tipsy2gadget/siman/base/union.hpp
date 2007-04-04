@@ -1,48 +1,64 @@
+// union.hpp - part of SimAn Simulation Analysis Library
 //
-// This file is part of SimAn
 //
-// Copyright (c) 2005-6 Andrew Pontzen
-// SimAn may not (currently) be used in any form without
-// prior permission. Please contact app26 (at) ast (dot) cam...
-// with all enquiries
+// Copyright (c) Andrew Pontzen 2005, 2006
 //
-// CUnion
+// SimAn is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
 //
-// simple child class of CSubset to take two CSubsets and return their union,
-// *WITH NO DUPLICATION CHECKING* (as yet)
+// SimAn is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public Licence for more details.
+//
+// You should have received a copy of the GNU General Public Licence
+// along with SimAn; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+
+
+
+
+
 
 #ifndef __UNION_H_INCLUDED
 
 #define __UNION_H_INCLUDED
 
-#include "subset.hpp"
-#include <list>
-#include <algorithm>
 
-class CUnion : public CSubset {
+namespace siman {
+
+class Union : public Subset {
 
  public:
-  CUnion(CSimSnap *pSim);
+  Union(SimSnap *pSim);
 
   
 
-  ~CUnion();
+  virtual ~Union();
 
-  virtual int getNumParticles();
-  virtual CParticle* getParticle(int id);
-  virtual void releaseParticle(CParticle *);
-  
-  virtual void pushParticle(int n);
+  virtual unsigned int getNumParticles() const;
+  virtual Particle* getParticle(unsigned int id);
+  virtual const Particle* getConstParticle(unsigned int id) const;
+  virtual std::pair<SimSnap *,unsigned int> getSnapAndRef(unsigned int id) const;
+ 
+  void add(SimSnap *pSub);
+  void add(SimSnap &sub);
 
-  void add(CSimSnap *pSub);
+  virtual int deReference(int i, int n=1) const;
+  virtual int deReference(int i, SimSnap *pObj) const;
 
-  void cache();
+
+  std::list<SimSnap*> & getList();
 
 protected:
 
-  list<CSimSnap*> children;
+  std::list<SimSnap*> children;
 
 };
 
+}
 
 #endif // UNION_H_INCLUDED

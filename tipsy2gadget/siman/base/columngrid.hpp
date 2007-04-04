@@ -1,46 +1,66 @@
+// columngrid.hpp - part of SimAn Simulation Analysis Library
 //
-// This file is part of SimAn
 //
-// Copyright (c) 2005-6 Andrew Pontzen
-// SimAn may not (currently) be used in any form without
-// prior permission. Please contact app26 (at) ast (dot) cam...
-// with all enquiries
+// Copyright (c) Andrew Pontzen 2005, 2006
 //
-// Grid, ColumnGrid and supporting classes
+// SimAn is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
 //
-// Basically for line-of-sight column density grids etc.
+// SimAn is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public Licence for more details.
+//
+// You should have received a copy of the GNU General Public Licence
+// along with SimAn; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+
+
+
+
+
 
 #ifndef __COLUMNGRID_H_INCLUDED
 
 #define __COLUMNGRID_H_INCLUDED
 
-class CColumnGrid {
+namespace siman {
+
+class ColumnGrid {
   
 public:
-  CColumnGrid(CSimSnap *parentSim, float x1, float x2, int nxi, float y1, float y2, int ny, bool assign = true);
+  ColumnGrid(SimSnap &parentSim, float x1, float x2, int nxi, float y1, float y2, int ny, bool assign = true);
   // assign = false to just set up the structures, without assigning particles
   
 
-  ~CColumnGrid();
+  virtual ~ColumnGrid();
 
   void realize();
 
-  double getColDen(float x, float y, double units, bool neutral);
-  double getColDen(int x, int y, double units, bool neutral);
+  double getColDen(float x, float y, std::string on_property);
+  double getColDen(int x, int y, std::string on_property);
 
   
 #ifdef SIMAN_FITS
 
 template <typename hdutype> 
-void CColumnGrid::columnDensityImage(hdutype *fitsFloatHDU,double units, bool neutral) {
+void columnDensityImage(hdutype *fitsFloatHDU,Unit out_unit,std::string on_property) {
 
   // Renders a column density image into fitsFloatHDU
-  // Multiplies by units first, to keep numbers nice.
+ 
   //
   // Note everything has internal DOUBLE precision, whilst the
   // rendered image is a FLOAT.
 
+  Unit prop_unit = (*this)[0][0].getArray(on_property).getUnits();
+  Unit dist_unit = (*this)[0][0].getDistanceUnits();
+
+  double conv_ratio = (prop_unit/(dist_unit*dist_unit)).convertTo(out_unit);
   
+ 
   long nelements = nx * ny; // number of pixels to render
 
   valarray<float> imgData(nelements);  // the array which will store the image
@@ -51,8 +71,9 @@ void CColumnGrid::columnDensityImage(hdutype *fitsFloatHDU,double units, bool ne
 
     for(int y=0;y<ny;y++) {
 
-         
-      imgData[x+y*ny] = (float) getColDen(x,y,units,neutral);
+      double result = getColDen(x,y,on_property)*conv_ratio;
+     
+      imgData[x+y*ny] = (float)(log(result)/2.3025851); // log10
      
       
     } // for x 
@@ -72,16 +93,13 @@ void CColumnGrid::columnDensityImage(hdutype *fitsFloatHDU,double units, bool ne
 
 #endif // SIMAN_FITS
 
-  virtual CTempColumnList operator[](int index);
+  virtual ColumnList & operator[](int index);
   
   // get area type information
   
   float getDx();
   float getDy();  
 
-protected:
-
-  CColumnGrid(); // for compatability with CTemp
 
 private:
 
@@ -90,17 +108,18 @@ private:
   /// it adds pixels in a square at distance >=dist to union u
   /// until at least minpix particles are contained within the union
   /// (poor man's sph)
-  int addToUnion(int cx, int cy, int dist, int minpix, CUnion &u);
+  int addToUnion(int cx, int cy, int dist, int minpix, Union &u);
 
   int nx, ny;
-  CColumnList **pColumnLists;
+  ColumnList **pColumnLists;
  
   float dx,dy,x1,y1; // pixel dx, dy and bottom-left x,y respectively
 
 
 };
 
-#define CTempColumnGrid CTemp<CColumnGrid, CTempColumnList > 
+}
+
 
 
 #endif // __COLUMNGRID_H_INCLUDED
