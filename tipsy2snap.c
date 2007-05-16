@@ -5,6 +5,9 @@
  * Unsure of provenance of treebi2snap.  I (trq) believe this is from
  * Dusan Keres.
  *
+ * For now we will assume standard Gadget units (distance in comoving
+ * h^-1 Mpc, etc.
+ * and PKDGRAV units: G = 1, rho_c = 1, L = 1
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -69,9 +72,11 @@ float masses[100];
 int nmass,masscount[100];
 
 double totMass=0.;
-float Lambda,hubble,boxsize;
+float Lambda,
+    hubble,			/* "little h" */
+    boxsize;
 double unit_Time,unit_Density,unit_Length,unit_Mass,unit_Velocity;
-float etaold,t0,H0;
+float etaold;
 int startflag=1;
 float mass_factor,length_factor,vel_factor;
 float redshift,aex;
@@ -79,13 +84,15 @@ float redshift,aex;
 int load_header(FILE *outp);
 int load_data(FILE *outp);
 int write_snapshot();
-int cosmounits();
+void cosmounits();
 
 int main(int argc, char **argv)
 {
 	if( argc != 3 ) {
 	    fprintf(stderr,
 		    "usage: tipsy2snap BoxSize(Mpc/h) Hubble_Param(0.01*H0) < infile > outfile\n");
+	    fprintf(stderr,
+		    "  tipsy input is in XDR format\n");
 	    exit(-1);
 	}
 	boxsize = atof(argv[1]);
@@ -126,12 +133,12 @@ load_header(FILE *outp)
 
 	cosmounits();
 	
-/* Unit conversion from TREEBI to gadget standard */
+/* Unit conversion from PKDGRAV to gadget standard */
 	mass_factor = unit_Mass/1.989e43*hubble; // Convert to 10^10 M_o/h
 	length_factor = unit_Length/3.085678e21*hubble ; // Convert to kpc/h
 	/* Convert to km/s, include sqrt(a) factor from Gadget */
 	vel_factor = unit_Velocity/1.e5*sqrt(aex); 
-	fprintf(stderr,"factors (a=%g): m=%g l=%g v=%g\n",aex,mass_factor,length_factor,vel_factor);
+	fprintf(stderr,"conversion factors (a=%g): m=%g l=%g v=%g\n",aex,mass_factor,length_factor,vel_factor);
 
 /* Load info into gadget header */
 	header1.npart[0] = Ngas;
@@ -230,6 +237,15 @@ load_data(FILE *outp)
 	header1.Omega0 = totMass/mass_factor;
 	header1.OmegaLambda = 1.0 - header1.Omega0;
 	
+        if( 1.-header1.Omega0 > 1.e-6 ) {
+                fprintf(stderr,"Setting Lambda = %g\n",1.-header1.Omega0);
+                Lambda = 1.-header1.Omega0;
+        }
+        else Lambda = 0.0;
+        fprintf(stderr,"COSMO PARAMS:  L=%g h^-1Mpc, h=%g, Omega=%g\n",
+		boxsize,hubble,header1.Omega0);
+        fprintf(stderr,"UNITS: T=%g rho=%g L=%g M=%g v=%g\n",unit_Time,unit_Density,unit_Length,unit_Mass,unit_Velocity);
+
 	return 0;
 }
 
@@ -278,7 +294,7 @@ int write_snapshot()
 		    fwrite(&star[n].pos[0], sizeof(float), 3, fd);
 		    }
 		else {
-		    (0);	/* incomplete implementation */
+		    assert(0);	/* incomplete implementation */
 		    }
 	      pc_new++;
 	    }
@@ -421,35 +437,36 @@ int write_snapshot()
 	return 0;
 }
 
-int
+/*
+ * Converts PKDGRAV cosmo units to CGS
+ */
+
+void
 cosmounits()
 {
-    double Pi=3.14159265358979323846;
-    double km=1.E5;
-    double Mpc=3.085678e24;
+    double Mpc=3.0856776e24;
 #if 0
     double m_p=1.6726231E-24;     /* proton mass */
     double k_B=1.380622E-16;      /* Boltzman constant */
 #endif
 
-        if( 1.-totMass > 1.e-6 ) {
-                fprintf(stderr,"Setting Lambda = %g\n",1.-totMass);
-                Lambda = 1.-totMass;
-        }
-        else Lambda = 0.0;
 
-    H0=sqrt(8*Pi/3);
-        t0 = 2./(3*H0);
+    /*
+	You have: sqrt(8 pi /(3 (100 km/s/megaparsec)^2))
+	You want: seconds
+		* 8.9312007e+17
+     */
+    unit_Time=8.9312007e+17/(hubble);
 
-    unit_Time=H0*Mpc/(100*hubble*km);
-    unit_Density=1.8791E-29*hubble*hubble;
+    /*
+	You have: 3 (100 km/s/megaparsec)^2/(8 pi G)
+	You want: gm/cc
+		* 1.8787075e-29
+     */
+
+    unit_Density=1.87870751E-29*hubble*hubble;
     unit_Length=boxsize*Mpc/hubble;
     unit_Mass=unit_Density*unit_Length*unit_Length*unit_Length;
     unit_Velocity=unit_Length/unit_Time;
 
-        fprintf(stderr,"COSMO PARAMS:  L=%g h^-1Mpc, h=%g, Omega=%g\n",
-		boxsize,hubble,totMass);
-        fprintf(stderr,"UNITS: T=%g rho=%g L=%g M=%g v=%g\n",unit_Time,unit_Density,unit_Length,unit_Mass,unit_Velocity);
-
-        return 0;
 }
