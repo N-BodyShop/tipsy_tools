@@ -1,7 +1,11 @@
+/* 
+ * Obtained by trq from Rubert Croft via Tiziana De Mateo
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
 
 #define  GRAVITY     6.672e-8
 #define  SOLAR_MASS  1.989e33
@@ -208,7 +212,6 @@ filter_gas()
   int  i;
 
   double Xh=H_MASSFRAC;  /* mass fraction of hydrogen */
-  double HubbleParam= 0.7;
   double MeanWeight, rhomean;
 
   /* first, let's compute the temperature */
@@ -238,8 +241,12 @@ filter_gas()
       /* temp now in kelvin */
     }
 
-  rhomean= header1.Omega0*3*Hubble*Hubble/(8*M_PI*G);
-
+  if(header1.Omega0 != 0.0) {
+      rhomean= header1.Omega0*3*Hubble*Hubble/(8*M_PI*G);
+      }
+  else {
+      rhomean = 1.0;
+      }
 
   NumPartFiltered= 0;
 
@@ -466,6 +473,7 @@ void load_snapshot(char *fname, int files, int type)
   char   buf[200];
   int    i,k,dummy,ntot_withmasses;
   int    n,pc,pc_new,pc_sph;
+  int nread;
 
 #define SKIP fread(&dummy, sizeof(dummy), 1, fd);
 
@@ -485,10 +493,18 @@ void load_snapshot(char *fname, int files, int type)
       fprintf(stderr,"reading `%s' ...\n",buf);
 
       fread(&dummy, sizeof(dummy), 1, fd);
-      fread(&header1, sizeof(header1), 1, fd);
+      nread = fread(&header1, sizeof(header1), 1, fd);
+      if(nread != 1) {
+	fprintf(stderr, "Bad header read of %s\n", buf);
+	exit(-1);
+	}
       fread(&dummy, sizeof(dummy), 1, fd);
 
-  fprintf(stderr,"header1.npart[k]=%d \n",header1.npart[type]);
+      for(k = 0; k < 6; k++) {
+	  fprintf(stderr,"header1.npart[%d]=%d \n", k, header1.npart[k]);
+	  }
+      fprintf(stderr,"extracting type %d \n", type);
+      
 
       if(files==1)
 	{
@@ -515,7 +531,8 @@ void load_snapshot(char *fname, int files, int type)
 	    {
 	      for(n=0;n<header1.npart[k];n++)
 		{
-		  fread(&P[pc_new].Pos[0], sizeof(float), 3, fd);
+		  nread = fread(&P[pc_new].Pos[0], sizeof(float), 3, fd);
+		  assert(nread == 3);
 		  pc_new++;
 		}
 	    }
@@ -531,7 +548,8 @@ void load_snapshot(char *fname, int files, int type)
 	    {
 	      for(n=0;n<header1.npart[k];n++)
 		{
-		  fread(&P[pc_new].Vel[0], sizeof(float), 3, fd);
+		  nread = fread(&P[pc_new].Vel[0], sizeof(float), 3, fd);
+		  assert(nread == 3);
 		  pc_new++;
 		}
 	    }
@@ -548,7 +566,8 @@ void load_snapshot(char *fname, int files, int type)
 	    {
 	      for(n=0;n<header1.npart[k];n++)
 		{
-		  fread(&Id[pc_new], sizeof(int), 1, fd);
+		  nread = fread(&Id[pc_new], sizeof(int), 1, fd);
+		  assert(nread == 1);
 		  pc_new++;
 		}
 	    }
@@ -570,50 +589,50 @@ void load_snapshot(char *fname, int files, int type)
       
 	for(k=0, pc_new=pc; k<6; k++)
 	{
-	  if (k==type) 
+	  if (k==type) {
 
-	    {
-
-	for(n=0;n<header1.npart[k];n++)
-
-	{
-	
-	if(header1.mass[k]==0) 
-
-	fread(&P[pc_new].Mass, sizeof(float), 1, fd);
-
-	else
-
-	      P[pc_new].Mass= header1.mass[k];
-	      pc_new++;
-
+	    for(n=0;n<header1.npart[k];n++) {
+		if(header1.mass[k]==0) {
+		    nread = fread(&P[pc_new].Mass, sizeof(float), 1, fd);
+		    assert(nread == 1);
+		    }
+		else
+		    P[pc_new].Mass= header1.mass[k];
+		pc_new++;
+		}
 	      }
+	  else
+		if(header1.mass[k]==0)
+		  {
+		      for(n=0;n<header1.npart[k];n++) {
+			  fseek(fd,sizeof(float),SEEK_CUR);
+		      }
+		  }
 	    }
-	else
-	  
-    if(header1.mass[k]==0)
-
-      {
-	  for(n=0;n<header1.npart[k];n++)
-	    {
-	  fseek(fd,sizeof(float),SEEK_CUR);
-	  }
-      }
-	      }
       
 
       if(ntot_withmasses>0)
 	SKIP;
 
       /*----------------------------------------------------------*/
-      
+      /* Gas variables */
 
       if(header1.npart[0]>0 && type==0)
 	{
 	  SKIP;
 	  for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 	    {
-	      fread(&P[pc_sph].Temp, sizeof(float), 1, fd);
+	      nread = fread(&P[pc_sph].Temp, sizeof(float), 1, fd);
+	      if(nread != 1) {
+		  if(pc_sph == pc) {
+		      fprintf(stderr, "WARNING: No SPH temperatures\n");
+		      return;
+		      }
+		  else {
+		      fprintf(stderr, "Short read of temperatures\n");
+		      exit(-1);
+		      }
+		  }
 	      pc_sph++;
 	    }
 	  SKIP;
@@ -621,7 +640,22 @@ void load_snapshot(char *fname, int files, int type)
 	  SKIP;
 	  for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 	    {
-	      fread(&P[pc_sph].Rho, sizeof(float), 1, fd);
+	      nread = fread(&P[pc_sph].Rho, sizeof(float), 1, fd);
+	      if(nread != 1) {
+		  if(pc_sph == pc) {
+		      fprintf(stderr, "WARNING: No SPH densities\n");
+		      while(n < header1.npart[0]) {
+			  P[pc_sph].Rho = 0.0; /* fill in with zeros */
+			  n++;
+			  pc_sph++;
+			  }
+		      return;
+		      }
+		  else {
+		      fprintf(stderr, "Short read of densities\n");
+		      exit(-1);
+		      }
+		  }
 	      pc_sph++;
 	    }
 	  SKIP;
@@ -631,7 +665,8 @@ void load_snapshot(char *fname, int files, int type)
 	      SKIP;
 	      for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 		{
-		  fread(&P[pc_sph].Ne, sizeof(float), 1, fd);
+		    nread = fread(&P[pc_sph].Ne, sizeof(float), 1, fd);
+		    assert(nread == 1);
 		  pc_sph++;
 		}
 	      SKIP;
@@ -651,7 +686,8 @@ void load_snapshot(char *fname, int files, int type)
 	      SKIP;
 	      for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 		{
-		  fread(&P[pc_sph].Hsml, sizeof(float), 1, fd);
+		  nread = fread(&P[pc_sph].Hsml, sizeof(float), 1, fd);
+		  assert(nread == 1);
 		  pc_sph++;
 		}
 	      SKIP;
@@ -672,7 +708,8 @@ void load_snapshot(char *fname, int files, int type)
 	      SKIP;
 	      for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 		{
-		  fread(&P[pc_sph].Hsml, sizeof(float), 1, fd);
+		    nread = fread(&P[pc_sph].Hsml, sizeof(float), 1, fd);
+		    assert(nread == 1);
 		  pc_sph++;
 		}
 	      SKIP;
