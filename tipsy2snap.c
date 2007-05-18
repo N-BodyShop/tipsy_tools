@@ -2,8 +2,8 @@
  * Taken from treebi2snap and modified by trq.
  * Reads tipsy standard and writes snap.
  *
- * Unsure of provenance of treebi2snap.  I (trq) believe this is from
- * Dusan Keres.
+ * treebi2snap was originally written (I believe) by Romeel Dave.  It
+ * was passed on to me by Dusan Keres.
  *
  * For now we will assume standard Gadget units (distance in comoving
  * h^-1 Mpc, etc.
@@ -76,6 +76,7 @@ float Lambda,
     hubble,			/* "little h" */
     boxsize;
 double unit_Time,unit_Density,unit_Length,unit_Mass,unit_Velocity;
+double unit_Kelvin_to_energy;
 float etaold;
 int startflag=1;
 float mass_factor,length_factor,vel_factor;
@@ -90,7 +91,7 @@ int main(int argc, char **argv)
 {
 	if( argc != 3 ) {
 	    fprintf(stderr,
-		    "usage: tipsy2snap BoxSize(Mpc/h) Hubble_Param(0.01*H0) < infile > outfile\n");
+		    "usage: tipsy2snap BoxSize(Mpc/h) Hubble_Param(0.01*H0 in km/s/Mpc) < infile > outfile\n");
 	    fprintf(stderr,
 		    "  tipsy input is in XDR format\n");
 	    exit(-1);
@@ -326,6 +327,7 @@ int write_snapshot()
       dummy=dummy/3;
 
       SKIP;
+      /* particle IDs */
       for(k=0,pc_new=pc;k<6;k++)
 	{
 	  for(n=0;n<header1.npart[k];n++)
@@ -358,12 +360,13 @@ int write_snapshot()
 	    }
 	}
       SKIP;
-
+      /* Gas specific quantities */
       if(header1.npart[0]>0)
 	{
 	  SKIP;
 	  for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 	    {
+		gas[n].temp *= unit_Kelvin_to_energy;
 		fwrite(&gas[n].temp, sizeof(float), 1, fd);
 		pc_sph++;
 	    }
@@ -444,11 +447,13 @@ int write_snapshot()
 void
 cosmounits()
 {
-    double Mpc=3.0856776e24;
-#if 0
-    double m_p=1.6726231E-24;     /* proton mass */
-    double k_B=1.380622E-16;      /* Boltzman constant */
-#endif
+    const double GAMMA =  (5.0/3);
+    const double GAMMA_MINUS1 = (GAMMA-1);
+    const double Mpc=3.085678e24;
+    const double m_p=1.6726231E-24;     /* proton mass */
+    const double k_B=1.380622E-16;      /* Boltzman constant */
+    const double MeanWeight = 0.6;
+    double unit_Energy_in_cgs;
 
 
     /*
@@ -468,5 +473,12 @@ cosmounits()
     unit_Length=boxsize*Mpc/hubble;
     unit_Mass=unit_Density*unit_Length*unit_Length*unit_Length;
     unit_Velocity=unit_Length/unit_Time;
+    unit_Energy_in_cgs=unit_Mass * pow(unit_Length,2) / pow(unit_Time,2);
+
+    unit_Kelvin_to_energy = k_B/(MeanWeight*m_p * GAMMA_MINUS1)
+       	            *  unit_Mass / unit_Energy_in_cgs;
+        fprintf(stderr,"COSMO PARAMS:  L=%g h^-1Mpc, h=%g, Omega=%g\n",
+		boxsize,hubble,totMass);
+        fprintf(stderr,"UNITS: T=%g rho=%g L=%g M=%g v=%g\n",unit_Time,unit_Density,unit_Length,unit_Mass,unit_Velocity);
 
 }
