@@ -7,40 +7,8 @@
 #include <math.h>
 #include <assert.h>
 
-#define  GRAVITY     6.672e-8
-#define  SOLAR_MASS  1.989e33
-#define  SOLAR_LUM   3.826e33
-#define  RAD_CONST   7.565e-15
-#define  AVOGADRO    6.0222e23
-#define  BOLTZMANN   1.3806e-16
-#define  GAS_CONST   8.31425e7
-#define  C           2.9979e10
-#define  PLANCK      6.6262e-27
-#define  CM_PER_MPC  3.085678e24
-#define  PROTONMASS  1.6726e-24
-#define  HUBBLE      3.2407789e-18   /* in h/sec */
-#define  SEC_PER_MEGAYEAR   3.155e13
-#define  SEC_PER_YEAR       3.155e7
-#define  GAMMA         (5.0/3)
-#define  GAMMA_MINUS1  (GAMMA-1)
 
-#define  H_MASSFRAC    0.76
-
-
-double  UnitLength_in_cm,
-        UnitMass_in_g,
-               UnitVelocity_in_cm_per_s,
-               UnitTime_in_s,
-               UnitTime_in_Megayears,
-               UnitDensity_in_cgs,
-               UnitPressure_in_cgs,
-               UnitCoolingRate_in_cgs,
-               UnitEnergy_in_cgs,
-               G,
-               Hubble;
-
-
-
+double G, Hubble;
 
 struct io_header_1
 {
@@ -77,51 +45,11 @@ int   *Id;
 
 double  Time, Redshift;
 
+#include "tipsydefs.h"
 
-#define Real float
-#define MAXDIM 3
-
-struct gas_particle {
-    Real mass;
-    Real pos[MAXDIM];
-    Real vel[MAXDIM];
-    Real rho;
-    Real temp;
-    Real hsmooth;
-    Real metals ;
-    Real phi ;
-} gasp;
-
-
-struct dark_particle {
-    Real mass;
-    Real pos[MAXDIM];
-    Real vel[MAXDIM];
-    Real eps;
-    Real phi ;
-} darkp;
-
-
-struct star_particle {
-    Real mass;
-    Real pos[MAXDIM];
-    Real vel[MAXDIM];
-    Real metals ;
-    Real tform ;
-    Real eps;
-    Real phi ;
-} starp;
-
-
-struct dump {
-    double time ;
-    int nbodies ;
-    int ndim ;
-    int nsph ;
-    int ndark ;
-    int nstar ;
-} ;
-struct dump header ;
+struct gas_particle gasp;
+struct dark_particle darkp;
+struct star_particle starp;
 
 void free_memory(void);
 void allocate_memory(void);
@@ -131,8 +59,9 @@ void filter_darkmatter();
 void filter_star();
 void filter_gas();
 int output_tipsy_gas(char *output_fname);
-int output_tipsy_star(char *output_fname);
+int output_tipsy_star(char *output_fname, int bBH);
 int output_tipsy_dark(char *output_fname);
+void set_unit();
 
 
 /* Here we load a snapshot file. It can be distributed
@@ -170,34 +99,45 @@ int main(int argc, char **argv)
 
   load_snapshot(input_fname, files, type=0);
 
+  set_unit();
+
   filter_gas();
-
-  printf("filtered gas particles...\n");
-
   output_tipsy_gas(output_fname);
-
   free_memory(); 
 
   printf("loading dark matter particles...\n");
-
   load_snapshot(input_fname, files, type=1);
-
   filter_darkmatter();
-
-  printf("filtered dark matter particles...\n");
-
   output_tipsy_dark(output_fname);
-
   free_memory();
 
-  printf("loading star particles...\n");
+  /* Handle funny component particles from Gadget.  Here we assume
+     that these types are collisionless only.  */
+  printf("loading disk particles... ");
+  load_snapshot(input_fname, files, type=2);
+  filter_darkmatter();
+  printf("and changing them to dark...\n");
+  output_tipsy_dark(output_fname);
+  free_memory();
 
+  printf("loading bulge particles... ");
+  load_snapshot(input_fname, files, type=3);
+  filter_darkmatter();
+  printf("and changing them to dark...\n");
+  output_tipsy_dark(output_fname);
+  free_memory();
+
+  printf("loading star particles... ");
   load_snapshot(input_fname, files, type=4);
-
   filter_star();
+  output_tipsy_star(output_fname, 0);
+  free_memory();
 
-  output_tipsy_star(output_fname);
-
+  printf("loading black hole particles... ");
+  load_snapshot(input_fname, files, type=5);
+  filter_darkmatter();
+  printf("and changing them to star...\n");
+  output_tipsy_star(output_fname, 1);
   free_memory();
 
   update_tipsy_header(output_fname);
@@ -205,6 +145,61 @@ int main(int argc, char **argv)
   exit(0);
 }
 
+struct units 
+{
+  double Length_in_cm; 
+  double Mass_in_g;
+  double Velocity_in_cm_per_s;
+  double Time_in_s;
+  double Time_in_Megayears;
+  double Density_in_cgs;
+  double Pressure_in_cgs;
+  double CoolingRate_in_cgs;
+  double Energy_in_cgs;
+    double Natural_vel_in_cgs;		/* sqrt(M/r) with G=1 */
+    } Unit;
+
+void set_unit()
+{
+    /*
+     * Assume length in kpc and mass in 1e10 Solarmasses
+     */
+#define  GRAVITY     6.672e-8
+#define  SOLAR_MASS  1.989e33
+#define  SOLAR_LUM   3.826e33
+#define  RAD_CONST   7.565e-15
+#define  AVOGADRO    6.0222e23
+#define  BOLTZMANN   1.3806e-16
+#define  GAS_CONST   8.31425e7
+#define  C           2.9979e10
+#define  PLANCK      6.6262e-27
+#define  CM_PER_KPC  3.085678e21
+#define  PROTONMASS  1.6726e-24
+#define  HUBBLE      3.2407789e-18   /* in h/sec */
+#define  SEC_PER_MEGAYEAR   3.155e13
+#define  SEC_PER_YEAR       3.155e7
+#define  GAMMA         (5.0/3)
+#define  GAMMA_MINUS1  (GAMMA-1)
+
+#define  H_MASSFRAC    0.76
+
+  Unit.Length_in_cm = CM_PER_KPC; 
+  Unit.Mass_in_g    = SOLAR_MASS*1.0e10;
+  Unit.Velocity_in_cm_per_s = 1e5;
+  Unit.Time_in_s= Unit.Length_in_cm / Unit.Velocity_in_cm_per_s;
+  Unit.Time_in_Megayears= Unit.Time_in_s/SEC_PER_MEGAYEAR;
+  Unit.Density_in_cgs=Unit.Mass_in_g/pow(Unit.Length_in_cm,3);
+  Unit.Pressure_in_cgs=Unit.Mass_in_g/Unit.Length_in_cm/pow(Unit.Time_in_s,2);
+  Unit.CoolingRate_in_cgs=Unit.Pressure_in_cgs/Unit.Time_in_s;
+  Unit.Energy_in_cgs=Unit.Mass_in_g * pow(Unit.Length_in_cm,2) / pow(Unit.Time_in_s,2);
+  Unit.Natural_vel_in_cgs = sqrt(GRAVITY * Unit.Mass_in_g/Unit.Length_in_cm);
+  
+  fprintf(stdout, "dMsolUnit is 1e10; dKpcUnit is 1.0;\n");
+  fprintf(stdout, "velocity is in units of %g km/s; time is in units of %g Gyr\n",
+	  Unit.Natural_vel_in_cgs/1e5,
+	  Unit.Length_in_cm/Unit.Natural_vel_in_cgs/(1e9*SEC_PER_YEAR));
+  
+    }
 
 void
 filter_gas()
@@ -216,18 +211,7 @@ filter_gas()
 
   /* first, let's compute the temperature */
 
-  UnitLength_in_cm = 3.085678e21; 
-  UnitMass_in_g    = 1.989e43;
-  UnitVelocity_in_cm_per_s = 1e5;
-
-  UnitTime_in_s= UnitLength_in_cm / UnitVelocity_in_cm_per_s;
-  UnitTime_in_Megayears= UnitTime_in_s/SEC_PER_MEGAYEAR;
-  G=GRAVITY/pow(UnitLength_in_cm,3)*UnitMass_in_g*pow(UnitTime_in_s,2);
-  UnitDensity_in_cgs=UnitMass_in_g/pow(UnitLength_in_cm,3);
-  UnitPressure_in_cgs=UnitMass_in_g/UnitLength_in_cm/pow(UnitTime_in_s,2);
-  UnitCoolingRate_in_cgs=UnitPressure_in_cgs/UnitTime_in_s;
-  UnitEnergy_in_cgs=UnitMass_in_g * pow(UnitLength_in_cm,2) / pow(UnitTime_in_s,2);
-  Hubble = HUBBLE * UnitTime_in_s;
+  Hubble = HUBBLE * Unit.Time_in_s;
 
 
 
@@ -236,7 +220,7 @@ filter_gas()
       MeanWeight= 4.0/(3*Xh+1+4*Xh* P[i].Ne) * PROTONMASS;
       
       P[i].Temp *= MeanWeight/BOLTZMANN * GAMMA_MINUS1 
-       	            * UnitEnergy_in_cgs/ UnitMass_in_g;
+       	            * Unit.Energy_in_cgs/ Unit.Mass_in_g;
       
       /* temp now in kelvin */
     }
@@ -264,8 +248,6 @@ filter_gas()
       else
 	P[i].Flag= 0; /* discard */
     }
-  
- 
 
 }
 
@@ -303,6 +285,7 @@ int output_tipsy_gas(char *output_fname)
 {
   int   i;
   FILE *outfile;
+  double vscale = Unit.Velocity_in_cm_per_s/Unit.Natural_vel_in_cgs;
 
   if(!(outfile = fopen(output_fname,"w")))
     {
@@ -310,7 +293,7 @@ int output_tipsy_gas(char *output_fname)
       exit(0);
     }
   
-  printf("writing gas particles to tipsy file...\n");
+  printf("velocity scaling: %g\n", vscale);
 
   /* Load tipsy header */
   header.time = header1.time;
@@ -331,9 +314,9 @@ int output_tipsy_gas(char *output_fname)
 	  gasp.pos[0] = P[i].Pos[0];
 	  gasp.pos[1] = P[i].Pos[1];
 	  gasp.pos[2] = P[i].Pos[2];
-	  gasp.vel[0] = P[i].Vel[0];
-	  gasp.vel[1] = P[i].Vel[1];
-	  gasp.vel[2] = P[i].Vel[2];
+	  gasp.vel[0] = P[i].Vel[0]*vscale;
+	  gasp.vel[1] = P[i].Vel[1]*vscale;
+	  gasp.vel[2] = P[i].Vel[2]*vscale;
 	  gasp.temp =   P[i].Temp;
 	  gasp.hsmooth = P[i].Hsml;
 	  gasp.rho = P[i].Rho;
@@ -346,15 +329,14 @@ int output_tipsy_gas(char *output_fname)
 
   fclose(outfile);
   
-  printf("done.\n");
-
   return 0;
 }
 
-int output_tipsy_star(char *output_fname)
+int output_tipsy_star(char *output_fname, int bBH)
 {
   int   i;
   FILE *outfile;
+  double vscale = Unit.Velocity_in_cm_per_s/Unit.Natural_vel_in_cgs;
 
   if(!(outfile = fopen(output_fname,"a")))
     {
@@ -362,22 +344,26 @@ int output_tipsy_star(char *output_fname)
       exit(0);
     }
   
-  printf("writing star particles to tipsy file...\n");
 
   for(i=1; i<=NumPart; i++) 
     {
       if(P[i].Flag)
 	{
 	  starp.mass =   P[i].Mass;
-	  /*	      printf("star mass %f ...\n",P[i].Mass); */
 	  starp.pos[0] = P[i].Pos[0];
 	  starp.pos[1] = P[i].Pos[1];
 	  starp.pos[2] = P[i].Pos[2];
-	  starp.vel[0] = P[i].Vel[0];
-	  starp.vel[1] = P[i].Vel[1];
-	  starp.vel[2] = P[i].Vel[2];
-	  starp.metals =   0.0;
-	  starp.tform = 0.0;
+	  starp.vel[0] = P[i].Vel[0]*vscale;
+	  starp.vel[1] = P[i].Vel[1]*vscale;
+	  starp.vel[2] = P[i].Vel[2]*vscale;
+	  starp.metals =   0.0;		/* XXX this is incomplete */
+	  if(bBH) {
+	      /* Negative tForm signals black hole to GASOLINE */
+	      starp.tform = -1;
+	      }
+	  else {
+	      starp.tform = 0.0;
+	      }
 	  starp.eps = 0.0;
 	  starp.phi = 0.0;
 
@@ -422,8 +408,7 @@ int output_tipsy_dark(char *output_fname)
 {
   int   i;
   FILE *outfile;
-
-  printf("writing dark matter particles to tipsy file...\n");
+  double vscale = Unit.Velocity_in_cm_per_s/Unit.Natural_vel_in_cgs;
 
   if(!(outfile = fopen(output_fname,"a")))
     {
@@ -439,10 +424,10 @@ int output_tipsy_dark(char *output_fname)
 	  darkp.pos[0] = P[i].Pos[0];
 	  darkp.pos[1] = P[i].Pos[1];
 	  darkp.pos[2] = P[i].Pos[2];
-	  darkp.vel[0] = P[i].Vel[0];
-	  darkp.vel[1] = P[i].Vel[1];
-	  darkp.vel[2] = P[i].Vel[2];
-	  darkp.eps = 0.;
+	  darkp.vel[0] = P[i].Vel[0]*vscale;
+	  darkp.vel[1] = P[i].Vel[1]*vscale;
+	  darkp.vel[2] = P[i].Vel[2]*vscale;
+	  darkp.eps = 0.;	/* XXX This is incomplete */
 	  darkp.phi = 0.;
 	  
 	  fwrite(&darkp, sizeof(struct dark_particle), 1, outfile) ;
@@ -490,8 +475,6 @@ void load_snapshot(char *fname, int files, int type)
 	  exit(0);
 	}
 
-      fprintf(stderr,"reading `%s' ...\n",buf);
-
       fread(&dummy, sizeof(dummy), 1, fd);
       nread = fread(&header1, sizeof(header1), 1, fd);
       if(nread != 1) {
@@ -499,12 +482,6 @@ void load_snapshot(char *fname, int files, int type)
 	exit(-1);
 	}
       fread(&dummy, sizeof(dummy), 1, fd);
-
-      for(k = 0; k < 6; k++) {
-	  fprintf(stderr,"header1.npart[%d]=%d \n", k, header1.npart[k]);
-	  }
-      fprintf(stderr,"extracting type %d \n", type);
-      
 
       if(files==1)
 	{
@@ -578,9 +555,6 @@ void load_snapshot(char *fname, int files, int type)
 
       
       /*----------------------------------------------------------*/
-
-      printf("doing masses stuff \n");
-
 
       if(ntot_withmasses>0)
 	SKIP;
@@ -726,7 +700,6 @@ void load_snapshot(char *fname, int files, int type)
 
       fclose(fd);
     }
-  fprintf(stderr,"done.\n");
 
   Time= header1.time;
   Redshift= header1.time;
