@@ -8,7 +8,8 @@
 #include <assert.h>
 
 
-double G, Hubble;
+double G,
+    Hubble; 			/* H_0 in 100 km/s/Mpc */
 
 struct io_header_1
 {
@@ -28,6 +29,15 @@ struct io_header_1
   char     fill[256- 6*4- 6*8- 2*8- 2*4- 6*4- 2*4 - 4*8];  /* fills to 256 Bytes */
 } header1;
 
+double softenings[6];		/* Gravitational softenings for each
+				   particle type */
+
+#define TYPE_GAS 0
+#define TYPE_HALO 1
+#define TYPE_DISK 2
+#define TYPE_BULGE 3
+#define TYPE_STAR 4
+#define TYPE_BNDRY 5
 
 int     NumPart, NumPartFiltered;
 
@@ -60,7 +70,7 @@ void filter_star();
 void filter_gas();
 int output_tipsy_gas(char *output_fname);
 int output_tipsy_star(char *output_fname, int bBH);
-int output_tipsy_dark(char *output_fname);
+int output_tipsy_dark(char *output_fname, int type);
 void set_unit();
 
 
@@ -73,27 +83,33 @@ void set_unit();
  */
 int main(int argc, char **argv)
 {
-  char output_fname[200], input_fname[200], basename[200], hsmlfile[200];
+  char output_fname[200], input_fname[200], basename[200];
   int  type, files;
   
-  if(argc != 2 && argc != 3 && argc !=4) 
+  if(argc != 10 && argc != 11) 
     {
-      fprintf(stderr,"usage: snap2tipsy <snapshotfile> [N_files]\n");
+      fprintf(stderr,
+	      "usage: snap2tipsy h eps_gas eps_dark eps_disk eps_bulge eps_star eps_bndry(BH) <snapshotfile> <tipsyfile> [N_files]\n");
+      fprintf(stderr, "	where h is H_0 in 100 km/s/Mpc and softenings are in kpc/h\n");
       exit(-1);
     }
 
-  strcpy(basename, argv[1]);
-  hsmlfile[0]= 0;
+  Hubble = atof(argv[1]);
+  for(type = 0; type < 6; type++) {
+      softenings[type] = atof(argv[2 + type]);
+      }
+  
+  strcpy(basename, argv[8]);
+  strcpy(output_fname, argv[9]);
 
-  if(argc >= 3 ) 
+  if(argc == 11 ) 
     {
-      files = atoi(argv[2]);	/* # of files per snapshot */
+      files = atoi(argv[10]);	/* # of files per snapshot */
     }
   else 
     files = 1;
 
   sprintf(input_fname, "%s", basename);
-  sprintf(output_fname, "%s.bin", basename);
 
   printf("loading gas particles...\n");
 
@@ -108,7 +124,7 @@ int main(int argc, char **argv)
   printf("loading dark matter particles...\n");
   load_snapshot(input_fname, files, type=1);
   filter_darkmatter();
-  output_tipsy_dark(output_fname);
+  output_tipsy_dark(output_fname, type);
   free_memory();
 
   /* Handle funny component particles from Gadget.  Here we assume
@@ -117,14 +133,14 @@ int main(int argc, char **argv)
   load_snapshot(input_fname, files, type=2);
   filter_darkmatter();
   printf("and changing them to dark...\n");
-  output_tipsy_dark(output_fname);
+  output_tipsy_dark(output_fname, type);
   free_memory();
 
   printf("loading bulge particles... ");
   load_snapshot(input_fname, files, type=3);
   filter_darkmatter();
   printf("and changing them to dark...\n");
-  output_tipsy_dark(output_fname);
+  output_tipsy_dark(output_fname, type);
   free_memory();
 
   printf("loading star particles... ");
@@ -183,8 +199,8 @@ void set_unit()
 
 #define  H_MASSFRAC    0.76
 
-  Unit.Length_in_cm = CM_PER_KPC; 
-  Unit.Mass_in_g    = SOLAR_MASS*1.0e10;
+  Unit.Length_in_cm = CM_PER_KPC/Hubble; 
+  Unit.Mass_in_g    = SOLAR_MASS*1.0e10/Hubble;
   Unit.Velocity_in_cm_per_s = 1e5;
   Unit.Time_in_s= Unit.Length_in_cm / Unit.Velocity_in_cm_per_s;
   Unit.Time_in_Megayears= Unit.Time_in_s/SEC_PER_MEGAYEAR;
@@ -194,7 +210,7 @@ void set_unit()
   Unit.Energy_in_cgs=Unit.Mass_in_g * pow(Unit.Length_in_cm,2) / pow(Unit.Time_in_s,2);
   Unit.Natural_vel_in_cgs = sqrt(GRAVITY * Unit.Mass_in_g/Unit.Length_in_cm);
   
-  fprintf(stdout, "dMsolUnit is 1e10; dKpcUnit is 1.0;\n");
+  fprintf(stdout, "dMsolUnit is %g; dKpcUnit is %g;\n", 1e10/Hubble, 1.0/Hubble);
   fprintf(stdout, "velocity is in units of %g km/s; time is in units of %g Gyr\n",
 	  Unit.Natural_vel_in_cgs/1e5,
 	  Unit.Length_in_cm/Unit.Natural_vel_in_cgs/(1e9*SEC_PER_YEAR));
@@ -318,7 +334,7 @@ int output_tipsy_gas(char *output_fname)
 	  gasp.vel[1] = P[i].Vel[1]*vscale;
 	  gasp.vel[2] = P[i].Vel[2]*vscale;
 	  gasp.temp =   P[i].Temp;
-	  gasp.hsmooth = P[i].Hsml;
+	  gasp.hsmooth = softenings[TYPE_GAS];
 	  gasp.rho = P[i].Rho;
 	  gasp.metals = 0.0;
 	  gasp.phi = 0.0;
@@ -360,11 +376,12 @@ int output_tipsy_star(char *output_fname, int bBH)
 	  if(bBH) {
 	      /* Negative tForm signals black hole to GASOLINE */
 	      starp.tform = -1;
+	      starp.eps = softenings[TYPE_BNDRY];
 	      }
 	  else {
 	      starp.tform = 0.0;
+	      starp.eps = softenings[TYPE_STAR];
 	      }
-	  starp.eps = 0.0;
 	  starp.phi = 0.0;
 
 	  fwrite(&starp, sizeof(struct star_particle), 1, outfile) ;
@@ -404,7 +421,7 @@ void update_tipsy_header(char *output_fname)
 }
 
 
-int output_tipsy_dark(char *output_fname)
+int output_tipsy_dark(char *output_fname, int type)
 {
   int   i;
   FILE *outfile;
@@ -420,14 +437,14 @@ int output_tipsy_dark(char *output_fname)
     {
       if(P[i].Flag)
 	{
-	  darkp.mass =   header1.mass[1];
+	  darkp.mass =   P[i].Mass;
 	  darkp.pos[0] = P[i].Pos[0];
 	  darkp.pos[1] = P[i].Pos[1];
 	  darkp.pos[2] = P[i].Pos[2];
 	  darkp.vel[0] = P[i].Vel[0]*vscale;
 	  darkp.vel[1] = P[i].Vel[1]*vscale;
 	  darkp.vel[2] = P[i].Vel[2]*vscale;
-	  darkp.eps = 0.;	/* XXX This is incomplete */
+	  darkp.eps = softenings[type];
 	  darkp.phi = 0.;
 	  
 	  fwrite(&darkp, sizeof(struct dark_particle), 1, outfile) ;
