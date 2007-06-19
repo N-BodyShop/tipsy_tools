@@ -430,7 +430,11 @@ string CBaseSimSnap::getArrayName(int n) {
 
 
 float * CBaseSimSnap::getArray(string name) {
-  return extraMap[name];
+    map<string, float*>::iterator i = extraMap.find(name);
+    if(i != extraMap.end())
+	return i->second;
+    else
+	return NULL;
 }
 
 float * CBaseSimSnap::getArray(int n) {
