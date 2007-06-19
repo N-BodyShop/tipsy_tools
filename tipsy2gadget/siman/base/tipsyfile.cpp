@@ -288,6 +288,29 @@ bool CTipsyFile::load() {
       cerr << "CTipsyFile: Did not find " << fname_HI << "; ionisation information unavailable." << endl;
     }
 
+    string fname_SphH = (string) fname + ".SphH";
+    ifstream file_SphH(fname_SphH.c_str());
+    if(file_SphH.is_open()) {
+      cerr << "CTipsyFile: loading Sph H data from " << fname_SphH << "...";
+      int n_SphH_dat;
+      file_SphH >> n_SphH_dat;
+      if(n_SphH_dat!=numParticles) {
+	cerr << "length mismatch ("<<numParticles << "/"
+	     << n_SphH_dat<<"), aborted SphH load" << endl;
+	} else {
+	    float *hsmooth = NULL;
+	    hsmooth = createArray("hsmooth", "Sph smoothing");
+	    for(int n=0; n<numParticles;n++) {
+		file_SphH >> hsmooth[n];
+		}
+	    }
+        cerr << "done!" << endl;
+	}
+    else {
+	cerr << "CTipsyFile: Did not find " << fname_SphH
+	     << "; Smoothing length information unavailable." << endl;
+	}
+      
     return true;
   } else {
     

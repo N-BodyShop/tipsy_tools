@@ -672,10 +672,10 @@ void CGadgetFile::nativeWrite(CSimSnap *s, string filename) {
 
       // Smoothing length
       file.write((char*)&sizefield,sizeof(int));
-      float *hsml = sGas.getArray("smoothlength");
+      float *hsml = sGas.getArray("hsmooth");
       if(hsml == NULL) {
 	  cerr << "WARNING: no smoothinglength" << endl;
-	  hsml = sGas.createArray("smoothlength", "SPH smoothing length");
+	  hsml = sGas.createArray("hsmooth", "Sph smoothing");
 	  }
       
       for(n=0; n<numGas; n++) {
