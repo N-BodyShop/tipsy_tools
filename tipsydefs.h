@@ -1,5 +1,6 @@
 #define MAXDIM 3
 #define forever for(;;)
+#include <rpc/types.h>
 #include <rpc/xdr.h>
 
 struct gas_particle {
