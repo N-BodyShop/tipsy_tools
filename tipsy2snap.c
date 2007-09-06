@@ -81,6 +81,9 @@ float etaold;
 int startflag=1;
 float mass_factor,length_factor,vel_factor;
 float redshift,aex;
+int bDoCosmo = 1;		/* Use Cosmological Units */
+double dKpcUnit;		/* Tipsy length Unit in Kpc */
+double dMSolUnit;		/* Tipsy mass Unit in solar masses */
 
 int load_header(FILE *outp);
 int load_data(FILE *outp);
@@ -89,15 +92,23 @@ void cosmounits();
 
 int main(int argc, char **argv)
 {
-	if( argc != 3 ) {
+	if( argc != 3 && argc != 5) {
 	    fprintf(stderr,
 		    "usage: tipsy2snap BoxSize(Mpc/h) Hubble_Param(0.01*H0 in km/s/Mpc) < infile > outfile\n");
+	    fprintf(stderr, "  tipsy input is in XDR format\nOR\n");
 	    fprintf(stderr,
-		    "  tipsy input is in XDR format\n");
+		    " tipsy2snap BoxSize(Mpc/h) Hubble_Param(0.01*H0 in km/s/Mpc) dKpcUnit dMSolUnit < infile > outfile\n");
+	    fprintf(stderr, "  (for non-cosmo tipsy files\n");
 	    exit(-1);
 	}
 	boxsize = atof(argv[1]);
 	hubble = atof(argv[2]);
+	if(argc == 5) 
+	    {
+		dKpcUnit = atof(argv[3]);
+		dMSolUnit = atof(argv[4]);
+		bDoCosmo = 0;
+		}
 
 	load_header(stdin);
 	load_data(stdin);
@@ -130,8 +141,12 @@ load_header(FILE *outp)
 	NumPart = header.nbodies;
 	Ngas = header.nsph;
 	NStar = header.nstar;
-	aex = header.time;
 
+	if(bDoCosmo)
+	    aex = header.time;
+	else
+	    aex = 1.0;
+		
 	cosmounits();
 	
 /* Unit conversion from PKDGRAV to gadget standard */
@@ -139,6 +154,7 @@ load_header(FILE *outp)
 	length_factor = unit_Length/3.085678e21*hubble ; // Convert to kpc/h
 	/* Convert to km/s, include sqrt(a) factor from Gadget */
 	vel_factor = unit_Velocity/1.e5*sqrt(aex); 
+	
 	fprintf(stderr,"conversion factors (a=%g): m=%g l=%g v=%g\n",aex,mass_factor,length_factor,vel_factor);
 
 /* Load info into gadget header */
@@ -151,8 +167,21 @@ load_header(FILE *outp)
 	for(i=0;i<6;i++) header1.mass[i] = 0.0;	/* masses will be
 						   specifed on a per
 						   particle basis */
-	header1.time = aex;
-	header1.redshift = 1.0/aex - 1.0;
+	if(bDoCosmo) 
+	    {
+		header1.time = aex;
+		header1.redshift = 1.0/aex - 1.0;
+		}
+	else 
+	    {
+		/*
+		 * internal time units of GADGET are
+		 * (kiloparsec/h)/(km/second)
+		 */
+		header1.time = header.time*unit_Time/3.0856776e+16*hubble;
+		header1.redshift = 0.0;
+		}
+	
 	header1.flag_sfr = 0;	/* This avoids hybrid particles */
 	header1.flag_feedback = 0;	/* what sort of feedback? */
 	header1.flag_cooling = 1;	/* do you want cooling? */
@@ -456,22 +485,36 @@ cosmounits()
     double unit_Energy_in_cgs;
 
 
-    /*
-	You have: sqrt(8 pi /(3 (100 km/s/megaparsec)^2))
-	You want: seconds
-		* 8.9312007e+17
-     */
-    unit_Time=8.9312007e+17/(hubble);
+    if(bDoCosmo) {
+	/*
+	    You have: sqrt(8 pi /(3 (100 km/s/megaparsec)^2))
+	    You want: seconds
+		    * 8.9312007e+17
+	 */
+	unit_Time=8.9312007e+17/(hubble);
 
-    /*
-	You have: 3 (100 km/s/megaparsec)^2/(8 pi G)
-	You want: gm/cc
-		* 1.8787075e-29
-     */
+	/*
+	    You have: 3 (100 km/s/megaparsec)^2/(8 pi G)
+	    You want: gm/cc
+		    * 1.8787075e-29
+	 */
 
-    unit_Density=1.87870751E-29*hubble*hubble;
-    unit_Length=boxsize*Mpc/hubble;
-    unit_Mass=unit_Density*unit_Length*unit_Length*unit_Length;
+	unit_Density=1.87870751E-29*hubble*hubble;
+	unit_Length=boxsize*Mpc/hubble;
+	unit_Mass=unit_Density*unit_Length*unit_Length*unit_Length;
+	}
+    else {
+	unit_Length = dKpcUnit*3.0856776e+21; /* KPC to cm */
+	unit_Mass=dMSolUnit*1.9891e+33;	      /* Msol to gm */
+	unit_Density = unit_Mass/(unit_Length*unit_Length*unit_Length);
+	/*
+	    You have: 1/sqrt(G sunmass/kiloparsec^3)
+	    You want: seconds
+		    * 1.487629e+19
+	 */
+	unit_Time = 1.487629e+19/sqrt(unit_Density);
+	}
+    
     unit_Velocity=unit_Length/unit_Time;
     unit_Energy_in_cgs=unit_Mass * pow(unit_Length,2) / pow(unit_Time,2);
 
