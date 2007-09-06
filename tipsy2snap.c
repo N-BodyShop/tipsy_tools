@@ -225,11 +225,13 @@ load_data(FILE *outp)
 		exit(-1);
 	}
 
+	double shift = bDoCosmo*0.5; /* zero shift for non cosmo */
+	
 	for(i = 0; i < header.nsph; i++) {
 	    xdr_gas(&xdrs, &(gas[i]));
-	    gas[i].pos[0] = length_factor*(gas[i].pos[0]+0.5);
-	    gas[i].pos[1] = length_factor*(gas[i].pos[1]+0.5);
-	    gas[i].pos[2] = length_factor*(gas[i].pos[2]+0.5);
+	    gas[i].pos[0] = length_factor*(gas[i].pos[0]+shift);
+	    gas[i].pos[1] = length_factor*(gas[i].pos[1]+shift);
+	    gas[i].pos[2] = length_factor*(gas[i].pos[2]+shift);
 	    gas[i].vel[0] *= vel_factor;
 	    gas[i].vel[1] *= vel_factor;
 	    gas[i].vel[2] *= vel_factor;
@@ -239,9 +241,9 @@ load_data(FILE *outp)
 	    }
 	for(i = 0; i < header.ndark; i++) {
 	    xdr_dark(&xdrs, &(dark[i]));
-	    dark[i].pos[0] = length_factor*(dark[i].pos[0]+0.5);
-	    dark[i].pos[1] = length_factor*(dark[i].pos[1]+0.5);
-	    dark[i].pos[2] = length_factor*(dark[i].pos[2]+0.5);
+	    dark[i].pos[0] = length_factor*(dark[i].pos[0]+shift);
+	    dark[i].pos[1] = length_factor*(dark[i].pos[1]+shift);
+	    dark[i].pos[2] = length_factor*(dark[i].pos[2]+shift);
 	    dark[i].vel[0] *= vel_factor;
 	    dark[i].vel[1] *= vel_factor;
 	    dark[i].vel[2] *= vel_factor;
@@ -253,9 +255,9 @@ load_data(FILE *outp)
 	    }
 	for(i = 0; i < header.nstar; i++) {
 	    xdr_star(&xdrs, &(star[i]));
-	    star[i].pos[0] = length_factor*(star[i].pos[0]+0.5);
-	    star[i].pos[1] = length_factor*(star[i].pos[1]+0.5);
-	    star[i].pos[2] = length_factor*(star[i].pos[2]+0.5);
+	    star[i].pos[0] = length_factor*(star[i].pos[0]+shift);
+	    star[i].pos[1] = length_factor*(star[i].pos[1]+shift);
+	    star[i].pos[2] = length_factor*(star[i].pos[2]+shift);
 	    star[i].vel[0] *= vel_factor;
 	    star[i].vel[1] *= vel_factor;
 	    star[i].vel[2] *= vel_factor;
@@ -512,7 +514,7 @@ cosmounits()
 	    You want: seconds
 		    * 1.487629e+19
 	 */
-	unit_Time = 1.487629e+19/sqrt(unit_Density);
+	unit_Time = 1.487629e+19/sqrt(dMSolUnit/(dKpcUnit*dKpcUnit*dKpcUnit));
 	}
     
     unit_Velocity=unit_Length/unit_Time;
