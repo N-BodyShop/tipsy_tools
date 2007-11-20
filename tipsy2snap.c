@@ -108,6 +108,7 @@ int main(int argc, char **argv)
 		dKpcUnit = atof(argv[3]);
 		dMSolUnit = atof(argv[4]);
 		bDoCosmo = 0;
+		Lambda = 0.0;
 		}
 
 	load_header(stdin);
