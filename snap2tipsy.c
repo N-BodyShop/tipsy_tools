@@ -1,13 +1,35 @@
 /* 
- * Obtained by trq from Rubert Croft via Tiziana De Mateo
+ * Obtained by trq from Rubert Croft via Tiziana De Mateo.
+ * Modified significantly by trq.
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <assert.h>
+#include <endian.h>
 
-
+/*
+ * In place swap of data
+ */
+void swapEndian(void *data, int size, int count)
+{
+    char *cdata = (char *) data;
+    int iCount;
+    
+    for(iCount = 0; iCount < count; iCount++) {
+	int i;
+	char temp;
+	
+	for(i = 0; i < size/2; i++) {
+	    temp = cdata[size-i-1];
+	    cdata[size-i-1] = cdata[i];
+	    cdata[i] = temp;
+	    }
+	cdata += size;
+	}
+    }
+	
 double G,
     Hubble; 			/* H_0 in 100 km/s/Mpc */
 
@@ -476,6 +498,7 @@ void load_snapshot(char *fname, int files, int type)
   int    i,k,dummy,ntot_withmasses;
   int    n,pc,pc_new,pc_sph;
   int nread;
+  int swap = 0;
 
 #define SKIP fread(&dummy, sizeof(dummy), 1, fd);
 
@@ -493,11 +516,24 @@ void load_snapshot(char *fname, int files, int type)
 	}
 
       fread(&dummy, sizeof(dummy), 1, fd);
+      if(dummy!=sizeof(header)) {
+	  swap = 1;
+	  swapEndian(&dummy, sizeof(dummy), 1);
+	  assert(dummy == sizeof(header));
+	  }
+      
       nread = fread(&header1, sizeof(header1), 1, fd);
       if(nread != 1) {
 	fprintf(stderr, "Bad header read of %s\n", buf);
 	exit(-1);
 	}
+      if(swap) {
+	  swapEndian(&header1, 4, 6*4);           // 6 integers
+	  swapEndian(&header1.mass, 8, 8*8);     // 8 doubles
+	  swapEndian(&header1.flag_sfr, 4, 40);  // 10 more integers
+	  swapEndian(&header1.BoxSize,8, 4*8);   // 4 more doubles
+	  }
+      
       fread(&dummy, sizeof(dummy), 1, fd);
 
       if(files==1)
@@ -527,6 +563,8 @@ void load_snapshot(char *fname, int files, int type)
 		{
 		  nread = fread(&P[pc_new].Pos[0], sizeof(float), 3, fd);
 		  assert(nread == 3);
+		  if(swap)
+		      swapEndian(&P[pc_new].Pos[0], sizeof(float), 3);
 		  pc_new++;
 		}
 	    }
@@ -544,6 +582,8 @@ void load_snapshot(char *fname, int files, int type)
 		{
 		  nread = fread(&P[pc_new].Vel[0], sizeof(float), 3, fd);
 		  assert(nread == 3);
+		  if(swap)
+		      swapEndian(&P[pc_new].Vel[0], sizeof(float), 3);
 		  pc_new++;
 		}
 	    }
@@ -562,6 +602,8 @@ void load_snapshot(char *fname, int files, int type)
 		{
 		  nread = fread(&Id[pc_new], sizeof(int), 1, fd);
 		  assert(nread == 1);
+		  if(swap) 
+		      swapEndian(&Id[pc_new], sizeof(int), 1);
 		  pc_new++;
 		}
 	    }
@@ -586,6 +628,8 @@ void load_snapshot(char *fname, int files, int type)
 		if(header1.mass[k]==0) {
 		    nread = fread(&P[pc_new].Mass, sizeof(float), 1, fd);
 		    assert(nread == 1);
+		    if(swap)
+			swapEndian(&P[pc_new].Mass, sizeof(float), 1);
 		    }
 		else
 		    P[pc_new].Mass= header1.mass[k];
@@ -624,6 +668,8 @@ void load_snapshot(char *fname, int files, int type)
 		      exit(-1);
 		      }
 		  }
+	      if(swap)
+		  swapEndian(&P[pc_sph].Temp, sizeof(float), 1);
 	      pc_sph++;
 	    }
 	  SKIP;
@@ -647,6 +693,8 @@ void load_snapshot(char *fname, int files, int type)
 		      exit(-1);
 		      }
 		  }
+	      if(swap)
+		  swapEndian(&P[pc_sph].Rho, sizeof(float), 1);
 	      pc_sph++;
 	    }
 	  SKIP;
@@ -658,6 +706,8 @@ void load_snapshot(char *fname, int files, int type)
 		{
 		    nread = fread(&P[pc_sph].Ne, sizeof(float), 1, fd);
 		    assert(nread == 1);
+		    if(swap)
+			swapEndian(&P[pc_sph].Ne, sizeof(float), 1);
 		  pc_sph++;
 		}
 	      SKIP;
@@ -679,6 +729,8 @@ void load_snapshot(char *fname, int files, int type)
 		{
 		  nread = fread(&P[pc_sph].Hsml, sizeof(float), 1, fd);
 		  assert(nread == 1);
+		  if(swap)
+		      swapEndian(&P[pc_sph].Hsml, sizeof(float), 1);
 		  pc_sph++;
 		}
 	      SKIP;
@@ -701,6 +753,8 @@ void load_snapshot(char *fname, int files, int type)
 		{
 		    nread = fread(&P[pc_sph].Hsml, sizeof(float), 1, fd);
 		    assert(nread == 1);
+		    if(swap)
+			swapEndian(&P[pc_sph].Hsml, sizeof(float), 1);
 		  pc_sph++;
 		}
 	      SKIP;
