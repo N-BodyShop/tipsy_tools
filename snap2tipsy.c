@@ -516,10 +516,11 @@ void load_snapshot(char *fname, int files, int type)
 	}
 
       fread(&dummy, sizeof(dummy), 1, fd);
-      if(dummy!=sizeof(header)) {
+      if(dummy!=sizeof(header1)) {
 	  swap = 1;
+	  fprintf(stderr, "Trying endian swap\n");
 	  swapEndian(&dummy, sizeof(dummy), 1);
-	  assert(dummy == sizeof(header));
+	  assert(dummy == sizeof(header1));
 	  }
       
       nread = fread(&header1, sizeof(header1), 1, fd);
@@ -528,12 +529,14 @@ void load_snapshot(char *fname, int files, int type)
 	exit(-1);
 	}
       if(swap) {
-	  swapEndian(&header1, 4, 6*4);           // 6 integers
-	  swapEndian(&header1.mass, 8, 8*8);     // 8 doubles
-	  swapEndian(&header1.flag_sfr, 4, 40);  // 10 more integers
-	  swapEndian(&header1.BoxSize,8, 4*8);   // 4 more doubles
+	  swapEndian(&header1, 4, 6);           // 6 integers
+	  swapEndian(&header1.mass, 8, 8);     // 8 doubles
+	  swapEndian(&header1.flag_sfr, 4, 10);  // 10 more integers
+	  swapEndian(&header1.BoxSize,8, 4);   // 4 more doubles
 	  }
       
+      fprintf(stderr, "BoxSize: %g\n", header1.BoxSize);
+      fprintf(stderr, "Hubble parameter: %g\n", header1.HubbleParam);
       fread(&dummy, sizeof(dummy), 1, fd);
 
       if(files==1)
@@ -679,8 +682,9 @@ void load_snapshot(char *fname, int files, int type)
 	    {
 	      nread = fread(&P[pc_sph].Rho, sizeof(float), 1, fd);
 	      if(nread != 1) {
-		  if(pc_sph == pc) {
+		  if(pc_sph == pc || n == 1) {
 		      fprintf(stderr, "WARNING: No SPH densities\n");
+		      n = 0;
 		      while(n < header1.npart[0]) {
 			  P[pc_sph].Rho = 0.0; /* fill in with zeros */
 			  n++;
@@ -689,7 +693,8 @@ void load_snapshot(char *fname, int files, int type)
 		      return;
 		      }
 		  else {
-		      fprintf(stderr, "Short read of densities\n");
+		      fprintf(stderr, "Short read of densities at n = %d\n",
+			      n);
 		      exit(-1);
 		      }
 		  }
@@ -768,6 +773,11 @@ void load_snapshot(char *fname, int files, int type)
 	
 	}
 
+      /*----------------------------------------------------------*/
+      /* Extra variables */
+      /* Unfortunately, we have no clue what could come here.
+       * There could be POT, ACCEL, DTENTR, TSTP
+       */
 
       fclose(fd);
     }
