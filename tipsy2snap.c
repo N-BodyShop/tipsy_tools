@@ -8,6 +8,8 @@
  * For now we will assume standard Gadget units (distance in comoving
  * h^-1 Mpc, etc.
  * and PKDGRAV units: G = 1, rho_c = 1, L = 1
+ * However, if you add extra arguments, it will used them as dKpcUnit
+ * and dMpcUnit
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -82,8 +84,8 @@ int startflag=1;
 float mass_factor,length_factor,vel_factor;
 float redshift,aex;
 int bDoCosmo = 1;		/* Use Cosmological Units */
-double dKpcUnit;		/* Tipsy length Unit in Kpc */
-double dMSolUnit;		/* Tipsy mass Unit in solar masses */
+double dKpcUnit = -1.0;		/* Tipsy length Unit in Kpc.  Negative => not set */
+double dMSolUnit = -1.0;	/* Tipsy mass Unit in solar masses */
 
 int load_header(FILE *outp);
 int load_data(FILE *outp);
@@ -92,22 +94,23 @@ void cosmounits();
 
 int main(int argc, char **argv)
 {
-	if( argc != 3 && argc != 5) {
+	if( argc != 3 && argc != 6) {
 	    fprintf(stderr,
 		    "usage: tipsy2snap BoxSize(Mpc/h) Hubble_Param(0.01*H0 in km/s/Mpc) < infile > outfile\n");
 	    fprintf(stderr, "  tipsy input is in XDR format\nOR\n");
 	    fprintf(stderr,
-		    " tipsy2snap BoxSize(Mpc/h) Hubble_Param(0.01*H0 in km/s/Mpc) dKpcUnit dMSolUnit < infile > outfile\n");
-	    fprintf(stderr, "  (for non-cosmo tipsy files\n");
+		    " tipsy2snap BoxSize(Mpc/h) Hubble_Param(0.01*H0 in km/s/Mpc) dKpcUnit dMSolUnit bCosmo < infile > outfile\n");
+	    fprintf(stderr, "  (for non-cosmo tipsy files or cosmo files with unnatural units.\n");
+	    fprintf(stderr, "  bCosmo is 1 for a cosmological simulation or 0 otherwise).\n");
 	    exit(-1);
 	}
 	boxsize = atof(argv[1]);
 	hubble = atof(argv[2]);
-	if(argc == 5) 
+	if(argc == 6) 
 	    {
 		dKpcUnit = atof(argv[3]);
 		dMSolUnit = atof(argv[4]);
-		bDoCosmo = 0;
+		bDoCosmo = atoi(argv[5]);
 		Lambda = 0.0;
 		}
 
@@ -488,7 +491,7 @@ cosmounits()
     double unit_Energy_in_cgs;
 
 
-    if(bDoCosmo) {
+    if(bDoCosmo && dMSolUnit < 0.0 ) {
 	/*
 	    You have: sqrt(8 pi /(3 (100 km/s/megaparsec)^2))
 	    You want: seconds
