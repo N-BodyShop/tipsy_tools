@@ -107,12 +107,14 @@ int main(int argc, char **argv)
 {
   char output_fname[200], input_fname[200], basename[200];
   int  type, files;
+  int bBHBndry;		/* Boundary (type = 5) particles are really Black Holes */
   
-  if(argc != 10 && argc != 11) 
+  if(argc != 11 && argc != 12) 
     {
       fprintf(stderr,
-	      "usage: snap2tipsy h eps_gas eps_dark eps_disk eps_bulge eps_star eps_bndry(BH) <snapshotfile> <tipsyfile> [N_files]\n");
+	      "usage: snap2tipsy h eps_gas eps_dark eps_disk eps_bulge eps_star eps_bndry(BH) bBH <snapshotfile> <tipsyfile> [N_files]\n");
       fprintf(stderr, "	where h is H_0 in 100 km/s/Mpc and softenings are in kpc/h\n");
+      fprintf(stderr, "	bBH = 1 implies type = 5 particles are black holes.\n");
       exit(-1);
     }
 
@@ -121,12 +123,13 @@ int main(int argc, char **argv)
       softenings[type] = atof(argv[2 + type]);
       }
   
-  strcpy(basename, argv[8]);
-  strcpy(output_fname, argv[9]);
+  bBHBndry = atoi(argv[8]);
+  strcpy(basename, argv[9]);
+  strcpy(output_fname, argv[10]);
 
-  if(argc == 11 ) 
+  if(argc == 12 ) 
     {
-      files = atoi(argv[10]);	/* # of files per snapshot */
+      files = atoi(argv[11]);	/* # of files per snapshot */
     }
   else 
     files = 1;
@@ -165,18 +168,29 @@ int main(int argc, char **argv)
   output_tipsy_dark(output_fname, type);
   free_memory();
 
+  if(!bBHBndry) {
+	printf("loading boundary particles... ");
+	load_snapshot(input_fname, files, type=5);
+	filter_darkmatter();
+	printf("and changing them to dark...\n");
+	output_tipsy_dark(output_fname, 1);
+  	free_memory();
+ 	} 
+
   printf("loading star particles... ");
   load_snapshot(input_fname, files, type=4);
   filter_star();
   output_tipsy_star(output_fname, 0);
   free_memory();
 
-  printf("loading black hole particles... ");
-  load_snapshot(input_fname, files, type=5);
-  filter_darkmatter();
-  printf("and changing them to star...\n");
-  output_tipsy_star(output_fname, 1);
-  free_memory();
+  if(bBHBndry) {
+	printf("loading black hole particles... ");
+	load_snapshot(input_fname, files, type=5);
+	filter_darkmatter();
+	printf("and changing them to star...\n");
+	output_tipsy_star(output_fname, 1);
+  	free_memory();
+	}
 
   update_tipsy_header(output_fname);
 
