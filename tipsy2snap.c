@@ -75,6 +75,7 @@ int nmass,masscount[100];
 
 double totMass=0.;
 float Lambda,
+    Omega,
     hubble,			/* "little h" */
     boxsize;
 double unit_Time,unit_Density,unit_Length,unit_Mass,unit_Velocity;
@@ -94,24 +95,25 @@ void cosmounits();
 
 int main(int argc, char **argv)
 {
-	if( argc != 3 && argc != 6) {
+	if( argc != 3 && argc != 8) {
 	    fprintf(stderr,
 		    "usage: tipsy2snap BoxSize(Mpc/h) Hubble_Param(0.01*H0 in km/s/Mpc) < infile > outfile\n");
 	    fprintf(stderr, "  tipsy input is in XDR format\nOR\n");
 	    fprintf(stderr,
-		    " tipsy2snap BoxSize(Mpc/h) Hubble_Param(0.01*H0 in km/s/Mpc) dKpcUnit dMSolUnit bCosmo < infile > outfile\n");
+		    " tipsy2snap BoxSize(Mpc/h) Hubble_Param(0.01*H0 in km/s/Mpc) dKpcUnit dMSolUnit bCosmo Omega Lambda < infile > outfile\n");
 	    fprintf(stderr, "  (for non-cosmo tipsy files or cosmo files with unnatural units.\n");
 	    fprintf(stderr, "  bCosmo is 1 for a cosmological simulation or 0 otherwise).\n");
 	    exit(-1);
 	}
 	boxsize = atof(argv[1]);
 	hubble = atof(argv[2]);
-	if(argc == 6) 
+	if(argc == 8) 
 	    {
 		dKpcUnit = atof(argv[3]);
 		dMSolUnit = atof(argv[4]);
 		bDoCosmo = atoi(argv[5]);
-		Lambda = 0.0;
+		Omega = atof(argv[6]);
+		Lambda = atof(argv[7]);
 		}
 
 	load_header(stdin);
@@ -270,14 +272,20 @@ load_data(FILE *outp)
 	    totMass += newmass;
 	    }
 	masscount[nmass] = NumPart;
-	header1.Omega0 = totMass/mass_factor;
-	header1.OmegaLambda = 1.0 - header1.Omega0;
+	if(dMSolUnit < 0.0) {
+	    header1.Omega0 = totMass/mass_factor;
+	    header1.OmegaLambda = 1.0 - header1.Omega0;
+	    if( 1.-header1.Omega0 > 1.e-6 ) {
+		    fprintf(stderr,"Setting Lambda = %g\n",1.-header1.Omega0);
+		    Lambda = 1.-header1.Omega0;
+	    }
+	    else Lambda = 0.0;
+	    }
+	else {
+	    header1.Omega0 = Omega;
+	    header1.OmegaLambda = Lambda;
+	    }
 	
-        if( 1.-header1.Omega0 > 1.e-6 ) {
-                fprintf(stderr,"Setting Lambda = %g\n",1.-header1.Omega0);
-                Lambda = 1.-header1.Omega0;
-        }
-        else Lambda = 0.0;
         fprintf(stderr,"COSMO PARAMS:  L=%g h^-1Mpc, h=%g, Omega=%g\n",
 		boxsize,hubble,header1.Omega0);
         fprintf(stderr,"UNITS: T=%g rho=%g L=%g M=%g v=%g\n",unit_Time,unit_Density,unit_Length,unit_Mass,unit_Velocity);

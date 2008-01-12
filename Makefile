@@ -1,5 +1,5 @@
 TOOLS = ascii2bin bin2ascii totipnat totipstd snapshot
-CFLAGS =  -O
+CFLAGS =  -Wall -O -g
 all: $(TOOLS)
 
 ascii2bin: ascii2bin.o
@@ -22,6 +22,9 @@ snapshot: snapshot.o
 
 tipsy2snap: tipsy2snap.o
 	$(CC) $(CFLAGS) -o tipsy2snap tipsy2snap.o -lm $(LIBS)
+
+snap2tipsy: snap2tipsy.o
+	$(CC) $(CFLAGS) -o snap2tipsy snap2tipsy.o -lm $(LIBS)
 
 clean:
 	rm -f *.o
