@@ -263,10 +263,6 @@ filter_gas()
 
   /* first, let's compute the temperature */
 
-  Hubble = HUBBLE * Unit.Time_in_s;
-
-
-
   for(i=1; i<=NumPart; i++)
     {
       MeanWeight= 4.0/(3*Xh+1+4*Xh* P[i].Ne) * PROTONMASS;
@@ -551,6 +547,8 @@ void load_snapshot(char *fname, int files, int type)
       
       fprintf(stderr, "BoxSize: %g\n", header1.BoxSize);
       fprintf(stderr, "Hubble parameter: %g\n", header1.HubbleParam);
+      fprintf(stderr, "Omega0: %g\n", header1.Omega0);
+      fprintf(stderr, "Lambda parameter: %g\n", header1.OmegaLambda);
       fread(&dummy, sizeof(dummy), 1, fd);
 
       if(files==1)
@@ -562,7 +560,7 @@ void load_snapshot(char *fname, int files, int type)
 	  NumPart= header1.npartTotal[type];
 	}
 
-      for(k=0, ntot_withmasses=0; k<5; k++)
+      for(k=0, ntot_withmasses=0; k<6; k++)
 	{
 	  if(header1.mass[k]==0)
 	    ntot_withmasses+= header1.npart[k];
