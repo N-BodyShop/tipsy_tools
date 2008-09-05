@@ -48,7 +48,17 @@ struct io_header_1
   double   Omega0;
   double   OmegaLambda;
   double   HubbleParam; 
-  char     fill[256- 6*4- 6*8- 2*8- 2*4- 6*4- 2*4 - 4*8];  /* fills to 256 Bytes */
+    /* Assuming TJ format */
+  int flag_multiphase;
+  int flag_stellarage;
+  int  flag_sfrhistogram;
+  int flag_stargens;
+  int flag_snapaspot;
+  int flag_metals;
+  int flag_energydetail;
+  int flag_parentID ;
+  int flag_starorig;
+  char     fill[256- 6*4- 6*8- 2*8- 2*4- 6*4- 2*4 - 4*8 - 9*4];  /* fills to 256 Bytes */
 } header1;
 
 double softenings[6];		/* Gravitational softenings for each
@@ -69,6 +79,8 @@ struct particle_data
   float  Pos[3];
   float  Vel[3];
   float  Mass, Rho, Temp, Ne, Hsml;  /* temp */
+  float tForm;
+  float Metals;
   int    Flag;
 } *P;
 
@@ -154,19 +166,34 @@ int main(int argc, char **argv)
 
   /* Handle funny component particles from Gadget.  Here we assume
      that these types are collisionless only.  */
-  printf("loading disk particles... ");
-  load_snapshot(input_fname, files, type=2);
-  filter_darkmatter();
-  printf("and changing them to dark...\n");
-  output_tipsy_dark(output_fname, type);
-  free_memory();
+  if(header1.redshift != 0.0) {
+      printf("loading disk particles... ");
+      load_snapshot(input_fname, files, type=2);
+      filter_darkmatter();
+      printf("and changing them to dark...\n");
+      output_tipsy_dark(output_fname, type);
+      free_memory();
 
-  printf("loading bulge particles... ");
-  load_snapshot(input_fname, files, type=3);
-  filter_darkmatter();
-  printf("and changing them to dark...\n");
-  output_tipsy_dark(output_fname, type);
-  free_memory();
+      printf("loading bulge particles... ");
+      load_snapshot(input_fname, files, type=3);
+      filter_darkmatter();
+      printf("and changing them to dark...\n");
+      output_tipsy_dark(output_fname, type);
+      free_memory();
+      }
+  else {
+      printf("loading disk particles... ");
+      load_snapshot(input_fname, files, type=2);
+      filter_star();
+      output_tipsy_star(output_fname, type);
+      free_memory();
+
+      printf("loading bulge particles... ");
+      load_snapshot(input_fname, files, type=3);
+      filter_star();
+      output_tipsy_star(output_fname, type);
+      free_memory();
+      }
 
   if(!bBHBndry) {
 	printf("loading boundary particles... ");
@@ -333,7 +360,9 @@ int output_tipsy_gas(char *output_fname)
 {
   int   i;
   FILE *outfile;
-  double vscale = Unit.Velocity_in_cm_per_s/Unit.Natural_vel_in_cgs;
+  /* Gadget units have an extra sqrt(a) in the internal velocities. */
+  double vscale = sqrt(1.0 + header1.redshift)
+      *Unit.Velocity_in_cm_per_s/Unit.Natural_vel_in_cgs;
 
   if(!(outfile = fopen(output_fname,"w")))
     {
@@ -368,7 +397,7 @@ int output_tipsy_gas(char *output_fname)
 	  gasp.temp =   P[i].Temp;
 	  gasp.hsmooth = softenings[TYPE_GAS];
 	  gasp.rho = P[i].Rho;
-	  gasp.metals = 0.0;
+	  gasp.metals = P[i].Metals;
 	  gasp.phi = 0.0;
 
 	  fwrite(&gasp, sizeof(struct gas_particle), 1, outfile) ;
@@ -384,7 +413,8 @@ int output_tipsy_star(char *output_fname, int bBH)
 {
   int   i;
   FILE *outfile;
-  double vscale = Unit.Velocity_in_cm_per_s/Unit.Natural_vel_in_cgs;
+  /* Gadget units have an extra sqrt(a) in the internal velocities. */
+  double vscale = sqrt(1.0 + header1.redshift)*Unit.Velocity_in_cm_per_s/Unit.Natural_vel_in_cgs;
 
   if(!(outfile = fopen(output_fname,"a")))
     {
@@ -404,14 +434,14 @@ int output_tipsy_star(char *output_fname, int bBH)
 	  starp.vel[0] = P[i].Vel[0]*vscale;
 	  starp.vel[1] = P[i].Vel[1]*vscale;
 	  starp.vel[2] = P[i].Vel[2]*vscale;
-	  starp.metals =   0.0;		/* XXX this is incomplete */
+	  starp.metals = P[i].Metals;
 	  if(bBH) {
 	      /* Negative tForm signals black hole to GASOLINE */
 	      starp.tform = -1;
 	      starp.eps = softenings[TYPE_BNDRY];
 	      }
 	  else {
-	      starp.tform = 0.0;
+	      starp.tform = P[i].tForm;
 	      starp.eps = softenings[TYPE_STAR];
 	      }
 	  starp.phi = 0.0;
@@ -457,7 +487,8 @@ int output_tipsy_dark(char *output_fname, int type)
 {
   int   i;
   FILE *outfile;
-  double vscale = Unit.Velocity_in_cm_per_s/Unit.Natural_vel_in_cgs;
+  /* Gadget units have an extra sqrt(a) in the internal velocities. */
+  double vscale = sqrt(1.0 + header1.redshift)*Unit.Velocity_in_cm_per_s/Unit.Natural_vel_in_cgs;
 
   if(!(outfile = fopen(output_fname,"a")))
     {
@@ -495,6 +526,17 @@ int output_tipsy_dark(char *output_fname, int type)
 
 
 
+int SKIP(FILE *fd, int swap, int count) 
+{
+    int dummy;
+    fread(&dummy, sizeof(dummy), 1, fd);
+    if(swap) swapEndian(&dummy, sizeof(dummy), 1);
+    fprintf(stderr, "At byte %ld: record size %d\n", ftell(fd), dummy);
+    if(feof(fd))
+	return 1;
+    assert(dummy == count);
+    return 0;
+    }
 
 
 /* this routine loads particle data from Gadget's default
@@ -507,10 +549,10 @@ void load_snapshot(char *fname, int files, int type)
   char   buf[200];
   int    i,k,dummy,ntot_withmasses;
   int    n,pc,pc_new,pc_sph;
+  int pc_star;
   int nread;
   int swap = 0;
-
-#define SKIP fread(&dummy, sizeof(dummy), 1, fd);
+  int nTotPart = 0;
 
   for(i=0, pc=1; i<files; i++, pc=pc_new)
     {
@@ -543,8 +585,11 @@ void load_snapshot(char *fname, int files, int type)
 	  swapEndian(&header1.mass, 8, 8);     // 8 doubles
 	  swapEndian(&header1.flag_sfr, 4, 10);  // 10 more integers
 	  swapEndian(&header1.BoxSize,8, 4);   // 4 more doubles
+	  swapEndian(&header1.flag_sfr, 4, 9);  // 9 more integers
 	  }
       
+      fprintf(stderr, "time: %g\n", header1.time);
+      fprintf(stderr, "redshift: %g\n", header1.redshift);
       fprintf(stderr, "BoxSize: %g\n", header1.BoxSize);
       fprintf(stderr, "Hubble parameter: %g\n", header1.HubbleParam);
       fprintf(stderr, "Omega0: %g\n", header1.Omega0);
@@ -564,12 +609,16 @@ void load_snapshot(char *fname, int files, int type)
 	{
 	  if(header1.mass[k]==0)
 	    ntot_withmasses+= header1.npart[k];
+	  nTotPart += header1.npart[k];
 	}
 
       if(i==0)
 	allocate_memory();
 
-      SKIP;
+      /*
+       * Positions
+       */
+      SKIP(fd, swap, sizeof(float)*3*nTotPart);
       for(k=0,pc_new=pc;k<6;k++)
 	{
 	  if(k==type)
@@ -586,9 +635,12 @@ void load_snapshot(char *fname, int files, int type)
 	  else
 	    fseek(fd, sizeof(float)*3*header1.npart[k], SEEK_CUR);
 	}
-      SKIP;
+      SKIP(fd, swap, sizeof(float)*3*nTotPart);
 
-      SKIP;
+      /*
+       * Velocities
+       */
+      SKIP(fd, swap, sizeof(float)*3*nTotPart);
       for(k=0,pc_new=pc;k<6;k++)
 	{
 	  if(k==type)
@@ -605,10 +657,12 @@ void load_snapshot(char *fname, int files, int type)
 	  else
 	    fseek(fd, sizeof(float)*3*header1.npart[k], SEEK_CUR);
 	}
-      SKIP;
+      SKIP(fd, swap, sizeof(float)*3*nTotPart);
     
-
-      SKIP;
+      /*
+       * IDs
+       */
+      SKIP(fd, swap, sizeof(int)*1*nTotPart);
       for(k=0,pc_new=pc;k<6;k++)
 	{
 	  if(k==type)
@@ -625,13 +679,15 @@ void load_snapshot(char *fname, int files, int type)
 	  else
 	    fseek(fd, sizeof(int)*header1.npart[k], SEEK_CUR);
 	}
-      SKIP;
-
+      SKIP(fd, swap, sizeof(int)*1*nTotPart);
       
       /*----------------------------------------------------------*/
 
+      /*
+       * Masses
+       */
       if(ntot_withmasses>0)
-	SKIP;
+	  SKIP(fd, swap, sizeof(float)*1*ntot_withmasses);
 
       /*      fseek(fd, sizeof(float)*ntot_withmasses, SEEK_CUR); */
       
@@ -662,14 +718,18 @@ void load_snapshot(char *fname, int files, int type)
       
 
       if(ntot_withmasses>0)
-	SKIP;
+	  SKIP(fd, swap, sizeof(float)*1*ntot_withmasses);
 
       /*----------------------------------------------------------*/
       /* Gas variables */
 
+      /*
+       * Internal Energy (converted to Temperatures later)
+       */
       if(header1.npart[0]>0 && type==0)
 	{
-	  SKIP;
+	  int bEof;
+	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
 	  for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 	    {
 	      nread = fread(&P[pc_sph].Temp, sizeof(float), 1, fd);
@@ -687,9 +747,18 @@ void load_snapshot(char *fname, int files, int type)
 		  swapEndian(&P[pc_sph].Temp, sizeof(float), 1);
 	      pc_sph++;
 	    }
-	  SKIP;
+	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
 
-	  SKIP;
+	  /*
+	   * Densities
+	   */
+	  bEof = SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	  if(bEof) {
+	      fprintf(stderr, "No densities: end of file\n");
+	      fclose(fd);
+	      continue;
+	      }
+	  
 	  for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 	    {
 	      nread = fread(&P[pc_sph].Rho, sizeof(float), 1, fd);
@@ -714,11 +783,14 @@ void load_snapshot(char *fname, int files, int type)
 		  swapEndian(&P[pc_sph].Rho, sizeof(float), 1);
 	      pc_sph++;
 	    }
-	  SKIP;
+	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
 
+	  /*
+	   * Electron Density
+	   */
 	  if(header1.flag_cooling)
 	    {
-	      SKIP;
+	      SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
 	      for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 		{
 		    nread = fread(&P[pc_sph].Ne, sizeof(float), 1, fd);
@@ -727,7 +799,7 @@ void load_snapshot(char *fname, int files, int type)
 			swapEndian(&P[pc_sph].Ne, sizeof(float), 1);
 		  pc_sph++;
 		}
-	      SKIP;
+	      SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
 	    }
 	  else
 	    for(n=0, pc_sph=pc; n<header1.npart[0];n++)
@@ -741,7 +813,7 @@ void load_snapshot(char *fname, int files, int type)
 
 	  if(header1.flag_cooling)
 	    {
-	      SKIP;
+	      SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
 	      for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 		{
 		  nread = fread(&P[pc_sph].Hsml, sizeof(float), 1, fd);
@@ -750,7 +822,7 @@ void load_snapshot(char *fname, int files, int type)
 		      swapEndian(&P[pc_sph].Hsml, sizeof(float), 1);
 		  pc_sph++;
 		}
-	      SKIP;
+	      SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
 	    }
 	  else
 	    for(n=0, pc_sph=pc; n<header1.npart[0];n++)
@@ -765,7 +837,7 @@ void load_snapshot(char *fname, int files, int type)
 
 	  if(header1.flag_cooling)
 	    {
-	      SKIP;
+	      SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
 	      for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 		{
 		    nread = fread(&P[pc_sph].Hsml, sizeof(float), 1, fd);
@@ -774,7 +846,7 @@ void load_snapshot(char *fname, int files, int type)
 			swapEndian(&P[pc_sph].Hsml, sizeof(float), 1);
 		  pc_sph++;
 		}
-	      SKIP;
+	      SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
 	    }
 	  else
 	    for(n=0, pc_sph=pc; n<header1.npart[0];n++)
@@ -784,7 +856,79 @@ void load_snapshot(char *fname, int files, int type)
 	      }
 	
 	}
+      else {
+	  fseek(fd,5*(header1.npart[0]*sizeof(float)+2*sizeof(int)),SEEK_CUR);
+	  }
+      
 
+      /*
+       * Skip star formation rate
+       */
+      if(header1.flag_sfr==1) {
+	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	  fseek(fd,header1.npart[0]*sizeof(float), SEEK_CUR);
+	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	  }
+      if(header1.flag_stellarage) {
+	  SKIP(fd, swap, sizeof(float)*1*header1.npart[4]);
+	  if(type == 4) {
+	      for(n=0, pc_star=pc; n<header1.npart[4];n++)
+		{
+		  nread = fread(&P[pc_star].tForm, sizeof(float), 1, fd);
+		  assert(nread == 1);
+		  if(swap)
+		      swapEndian(&P[pc_star].tForm, sizeof(float), 1);
+		  pc_star++;
+		}
+	      }
+	  else {
+	      fseek(fd,header1.npart[4]*sizeof(float), SEEK_CUR);
+	      }
+	  SKIP(fd, swap, sizeof(float)*1*header1.npart[4]);
+	  }
+
+      if(header1.flag_feedback) {
+	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	  fseek(fd,header1.npart[0]*sizeof(float), SEEK_CUR);
+	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	  }
+      if(header1.flag_snapaspot==1) {
+	  SKIP(fd, swap, sizeof(float)*nTotPart);
+	  fseek(fd,nTotPart*sizeof(float), SEEK_CUR);
+	  SKIP(fd, swap, sizeof(float)*nTotPart);
+	  }
+      if(header1.flag_metals) {
+	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	  if(type == 0) {
+	      for(n=0, pc_sph=pc; n<header1.npart[0];n++)
+		{
+		  nread = fread(&P[pc_sph].Metals, sizeof(float), 1, fd);
+		  assert(nread == 1);
+		  if(swap)
+		      swapEndian(&P[pc_sph].Metals, sizeof(float), 1);
+		  pc_sph++;
+		}
+	      }
+	  else {
+	      fseek(fd,header1.npart[0]*sizeof(float), SEEK_CUR);
+	      }
+	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	  SKIP(fd, swap, sizeof(float)*1*header1.npart[4]);
+	  if(type == 4) {
+	      for(n=0, pc_star=pc; n<header1.npart[4];n++)
+		{
+		  nread = fread(&P[pc_star].Metals, sizeof(float), 1, fd);
+		  assert(nread == 1);
+		  if(swap)
+		      swapEndian(&P[pc_star].Metals, sizeof(float), 1);
+		  pc_star++;
+		}
+	      }
+	  else {
+	      fseek(fd,header1.npart[4]*sizeof(float), SEEK_CUR);
+	      }
+	  SKIP(fd, swap, sizeof(float)*1*header1.npart[4]);
+	  }
       /*----------------------------------------------------------*/
       /* Extra variables */
       /* Unfortunately, we have no clue what could come here.
