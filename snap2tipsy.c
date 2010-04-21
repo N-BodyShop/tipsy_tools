@@ -9,6 +9,12 @@
 #include <assert.h>
 #include <endian.h>
 
+#ifdef GADGET_DOUBLE
+typedef double GFloat;
+#else
+typedef float GFloat;
+#endif
+
 /*
  * In place swap of data
  */
@@ -76,11 +82,11 @@ int     NumPart, NumPartFiltered;
 
 struct particle_data 
 {
-  float  Pos[3];
-  float  Vel[3];
-  float  Mass, Rho, Temp, Ne, Hsml;  /* temp */
-  float tForm;
-  float Metals;
+  GFloat  Pos[3];
+  GFloat  Vel[3];
+  GFloat  Mass, Rho, Temp, Ne, Hsml;  /* temp */
+  GFloat tForm;
+  GFloat Metals;
   int    Flag;
 } *P;
 
@@ -262,6 +268,8 @@ void set_unit()
 
 #define  H_MASSFRAC    0.76
 
+    if(Hubble == 0.0) Hubble = 1.0;
+    
   Unit.Length_in_cm = CM_PER_KPC/Hubble; 
   Unit.Mass_in_g    = SOLAR_MASS*1.0e10/Hubble;
   Unit.Velocity_in_cm_per_s = 1e5;
@@ -534,6 +542,10 @@ int SKIP(FILE *fd, int swap, int count)
     fprintf(stderr, "At byte %ld: record size %d\n", ftell(fd), dummy);
     if(feof(fd))
 	return 1;
+    if(count == 2*dummy || dummy == 2*count) {
+	fprintf(stderr, "Possible double vs float problem\n");
+	fprintf(stderr, "Expected %d; got %d\n", count, dummy);
+	}
     assert(dummy == count);
     return 0;
     }
@@ -552,10 +564,13 @@ void load_snapshot(char *fname, int files, int type)
   int pc_star;
   int nread;
   int swap = 0;
-  int nTotPart = 0;
+  double fMinMass = 1e38;
+  double fMaxMass = 0.0;
+      
 
   for(i=0, pc=1; i<files; i++, pc=pc_new)
     {
+      int nTotPart = 0;  /* Total particles in this file */
       if(files>1)
 	sprintf(buf,"%s.%d",fname,i);
       else
@@ -618,46 +633,46 @@ void load_snapshot(char *fname, int files, int type)
       /*
        * Positions
        */
-      SKIP(fd, swap, sizeof(float)*3*nTotPart);
+      SKIP(fd, swap, sizeof(GFloat)*3*nTotPart);
       for(k=0,pc_new=pc;k<6;k++)
 	{
 	  if(k==type)
 	    {
 	      for(n=0;n<header1.npart[k];n++)
 		{
-		  nread = fread(&P[pc_new].Pos[0], sizeof(float), 3, fd);
+		  nread = fread(&P[pc_new].Pos[0], sizeof(GFloat), 3, fd);
 		  assert(nread == 3);
 		  if(swap)
-		      swapEndian(&P[pc_new].Pos[0], sizeof(float), 3);
+		      swapEndian(&P[pc_new].Pos[0], sizeof(GFloat), 3);
 		  pc_new++;
 		}
 	    }
 	  else
-	    fseek(fd, sizeof(float)*3*header1.npart[k], SEEK_CUR);
+	    fseek(fd, sizeof(GFloat)*3*header1.npart[k], SEEK_CUR);
 	}
-      SKIP(fd, swap, sizeof(float)*3*nTotPart);
+      SKIP(fd, swap, sizeof(GFloat)*3*nTotPart);
 
       /*
        * Velocities
        */
-      SKIP(fd, swap, sizeof(float)*3*nTotPart);
+      SKIP(fd, swap, sizeof(GFloat)*3*nTotPart);
       for(k=0,pc_new=pc;k<6;k++)
 	{
 	  if(k==type)
 	    {
 	      for(n=0;n<header1.npart[k];n++)
 		{
-		  nread = fread(&P[pc_new].Vel[0], sizeof(float), 3, fd);
+		  nread = fread(&P[pc_new].Vel[0], sizeof(GFloat), 3, fd);
 		  assert(nread == 3);
 		  if(swap)
-		      swapEndian(&P[pc_new].Vel[0], sizeof(float), 3);
+		      swapEndian(&P[pc_new].Vel[0], sizeof(GFloat), 3);
 		  pc_new++;
 		}
 	    }
 	  else
-	    fseek(fd, sizeof(float)*3*header1.npart[k], SEEK_CUR);
+	    fseek(fd, sizeof(GFloat)*3*header1.npart[k], SEEK_CUR);
 	}
-      SKIP(fd, swap, sizeof(float)*3*nTotPart);
+      SKIP(fd, swap, sizeof(GFloat)*3*nTotPart);
     
       /*
        * IDs
@@ -687,23 +702,25 @@ void load_snapshot(char *fname, int files, int type)
        * Masses
        */
       if(ntot_withmasses>0)
-	  SKIP(fd, swap, sizeof(float)*1*ntot_withmasses);
+	  SKIP(fd, swap, sizeof(GFloat)*1*ntot_withmasses);
 
-      /*      fseek(fd, sizeof(float)*ntot_withmasses, SEEK_CUR); */
-      
 	for(k=0, pc_new=pc; k<6; k++)
 	{
 	  if (k==type) {
 
 	    for(n=0;n<header1.npart[k];n++) {
 		if(header1.mass[k]==0) {
-		    nread = fread(&P[pc_new].Mass, sizeof(float), 1, fd);
+		    nread = fread(&P[pc_new].Mass, sizeof(GFloat), 1, fd);
 		    assert(nread == 1);
 		    if(swap)
-			swapEndian(&P[pc_new].Mass, sizeof(float), 1);
+			swapEndian(&P[pc_new].Mass, sizeof(GFloat), 1);
 		    }
 		else
 		    P[pc_new].Mass= header1.mass[k];
+		if(P[pc_new].Mass > fMaxMass)
+		    fMaxMass = P[pc_new].Mass;
+		if(P[pc_new].Mass < fMinMass)
+		    fMinMass = P[pc_new].Mass;
 		pc_new++;
 		}
 	      }
@@ -711,14 +728,16 @@ void load_snapshot(char *fname, int files, int type)
 		if(header1.mass[k]==0)
 		  {
 		      for(n=0;n<header1.npart[k];n++) {
-			  fseek(fd,sizeof(float),SEEK_CUR);
+			  fseek(fd,sizeof(GFloat),SEEK_CUR);
 		      }
 		  }
 	    }
       
 
+	fprintf(stderr, "Mass range: %g to %g\n", fMinMass, fMaxMass);
+	
       if(ntot_withmasses>0)
-	  SKIP(fd, swap, sizeof(float)*1*ntot_withmasses);
+	  SKIP(fd, swap, sizeof(GFloat)*1*ntot_withmasses);
 
       /*----------------------------------------------------------*/
       /* Gas variables */
@@ -729,10 +748,10 @@ void load_snapshot(char *fname, int files, int type)
       if(header1.npart[0]>0 && type==0)
 	{
 	  int bEof;
-	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	  SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[0]);
 	  for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 	    {
-	      nread = fread(&P[pc_sph].Temp, sizeof(float), 1, fd);
+	      nread = fread(&P[pc_sph].Temp, sizeof(GFloat), 1, fd);
 	      if(nread != 1) {
 		  if(pc_sph == pc) {
 		      fprintf(stderr, "WARNING: No SPH temperatures\n");
@@ -744,15 +763,15 @@ void load_snapshot(char *fname, int files, int type)
 		      }
 		  }
 	      if(swap)
-		  swapEndian(&P[pc_sph].Temp, sizeof(float), 1);
+		  swapEndian(&P[pc_sph].Temp, sizeof(GFloat), 1);
 	      pc_sph++;
 	    }
-	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	  SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[0]);
 
 	  /*
 	   * Densities
 	   */
-	  bEof = SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	  bEof = SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[0]);
 	  if(bEof) {
 	      fprintf(stderr, "No densities: end of file\n");
 	      fclose(fd);
@@ -761,7 +780,7 @@ void load_snapshot(char *fname, int files, int type)
 	  
 	  for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 	    {
-	      nread = fread(&P[pc_sph].Rho, sizeof(float), 1, fd);
+	      nread = fread(&P[pc_sph].Rho, sizeof(GFloat), 1, fd);
 	      if(nread != 1) {
 		  if(pc_sph == pc || n == 1) {
 		      fprintf(stderr, "WARNING: No SPH densities\n");
@@ -780,26 +799,26 @@ void load_snapshot(char *fname, int files, int type)
 		      }
 		  }
 	      if(swap)
-		  swapEndian(&P[pc_sph].Rho, sizeof(float), 1);
+		  swapEndian(&P[pc_sph].Rho, sizeof(GFloat), 1);
 	      pc_sph++;
 	    }
-	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	  SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[0]);
 
 	  /*
 	   * Electron Density
 	   */
 	  if(header1.flag_cooling)
 	    {
-	      SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	      SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[0]);
 	      for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 		{
-		    nread = fread(&P[pc_sph].Ne, sizeof(float), 1, fd);
+		    nread = fread(&P[pc_sph].Ne, sizeof(GFloat), 1, fd);
 		    assert(nread == 1);
 		    if(swap)
-			swapEndian(&P[pc_sph].Ne, sizeof(float), 1);
+			swapEndian(&P[pc_sph].Ne, sizeof(GFloat), 1);
 		  pc_sph++;
 		}
-	      SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	      SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[0]);
 	    }
 	  else
 	    for(n=0, pc_sph=pc; n<header1.npart[0];n++)
@@ -813,16 +832,16 @@ void load_snapshot(char *fname, int files, int type)
 
 	  if(header1.flag_cooling)
 	    {
-	      SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	      SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[0]);
 	      for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 		{
-		  nread = fread(&P[pc_sph].Hsml, sizeof(float), 1, fd);
+		  nread = fread(&P[pc_sph].Hsml, sizeof(GFloat), 1, fd);
 		  assert(nread == 1);
 		  if(swap)
-		      swapEndian(&P[pc_sph].Hsml, sizeof(float), 1);
+		      swapEndian(&P[pc_sph].Hsml, sizeof(GFloat), 1);
 		  pc_sph++;
 		}
-	      SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	      SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[0]);
 	    }
 	  else
 	    for(n=0, pc_sph=pc; n<header1.npart[0];n++)
@@ -837,16 +856,16 @@ void load_snapshot(char *fname, int files, int type)
 
 	  if(header1.flag_cooling)
 	    {
-	      SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	      SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[0]);
 	      for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 		{
-		    nread = fread(&P[pc_sph].Hsml, sizeof(float), 1, fd);
+		    nread = fread(&P[pc_sph].Hsml, sizeof(GFloat), 1, fd);
 		    assert(nread == 1);
 		    if(swap)
-			swapEndian(&P[pc_sph].Hsml, sizeof(float), 1);
+			swapEndian(&P[pc_sph].Hsml, sizeof(GFloat), 1);
 		  pc_sph++;
 		}
-	      SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	      SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[0]);
 	    }
 	  else
 	    for(n=0, pc_sph=pc; n<header1.npart[0];n++)
@@ -857,7 +876,7 @@ void load_snapshot(char *fname, int files, int type)
 	
 	}
       else {
-	  fseek(fd,5*(header1.npart[0]*sizeof(float)+2*sizeof(int)),SEEK_CUR);
+	  fseek(fd,5*(header1.npart[0]*sizeof(GFloat)+2*sizeof(int)),SEEK_CUR);
 	  }
       
 
@@ -865,69 +884,69 @@ void load_snapshot(char *fname, int files, int type)
        * Skip star formation rate
        */
       if(header1.flag_sfr==1) {
-	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
-	  fseek(fd,header1.npart[0]*sizeof(float), SEEK_CUR);
-	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	  SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[0]);
+	  fseek(fd,header1.npart[0]*sizeof(GFloat), SEEK_CUR);
+	  SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[0]);
 	  }
       if(header1.flag_stellarage) {
-	  SKIP(fd, swap, sizeof(float)*1*header1.npart[4]);
+	  SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[4]);
 	  if(type == 4) {
 	      for(n=0, pc_star=pc; n<header1.npart[4];n++)
 		{
-		  nread = fread(&P[pc_star].tForm, sizeof(float), 1, fd);
+		  nread = fread(&P[pc_star].tForm, sizeof(GFloat), 1, fd);
 		  assert(nread == 1);
 		  if(swap)
-		      swapEndian(&P[pc_star].tForm, sizeof(float), 1);
+		      swapEndian(&P[pc_star].tForm, sizeof(GFloat), 1);
 		  pc_star++;
 		}
 	      }
 	  else {
-	      fseek(fd,header1.npart[4]*sizeof(float), SEEK_CUR);
+	      fseek(fd,header1.npart[4]*sizeof(GFloat), SEEK_CUR);
 	      }
-	  SKIP(fd, swap, sizeof(float)*1*header1.npart[4]);
+	  SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[4]);
 	  }
 
       if(header1.flag_feedback) {
-	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
-	  fseek(fd,header1.npart[0]*sizeof(float), SEEK_CUR);
-	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	  SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[0]);
+	  fseek(fd,header1.npart[0]*sizeof(GFloat), SEEK_CUR);
+	  SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[0]);
 	  }
       if(header1.flag_snapaspot==1) {
-	  SKIP(fd, swap, sizeof(float)*nTotPart);
-	  fseek(fd,nTotPart*sizeof(float), SEEK_CUR);
-	  SKIP(fd, swap, sizeof(float)*nTotPart);
+	  SKIP(fd, swap, sizeof(GFloat)*nTotPart);
+	  fseek(fd,nTotPart*sizeof(GFloat), SEEK_CUR);
+	  SKIP(fd, swap, sizeof(GFloat)*nTotPart);
 	  }
       if(header1.flag_metals) {
-	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
+	  SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[0]);
 	  if(type == 0) {
 	      for(n=0, pc_sph=pc; n<header1.npart[0];n++)
 		{
-		  nread = fread(&P[pc_sph].Metals, sizeof(float), 1, fd);
+		  nread = fread(&P[pc_sph].Metals, sizeof(GFloat), 1, fd);
 		  assert(nread == 1);
 		  if(swap)
-		      swapEndian(&P[pc_sph].Metals, sizeof(float), 1);
+		      swapEndian(&P[pc_sph].Metals, sizeof(GFloat), 1);
 		  pc_sph++;
 		}
 	      }
 	  else {
-	      fseek(fd,header1.npart[0]*sizeof(float), SEEK_CUR);
+	      fseek(fd,header1.npart[0]*sizeof(GFloat), SEEK_CUR);
 	      }
-	  SKIP(fd, swap, sizeof(float)*1*header1.npart[0]);
-	  SKIP(fd, swap, sizeof(float)*1*header1.npart[4]);
+	  SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[0]);
+	  SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[4]);
 	  if(type == 4) {
 	      for(n=0, pc_star=pc; n<header1.npart[4];n++)
 		{
-		  nread = fread(&P[pc_star].Metals, sizeof(float), 1, fd);
+		  nread = fread(&P[pc_star].Metals, sizeof(GFloat), 1, fd);
 		  assert(nread == 1);
 		  if(swap)
-		      swapEndian(&P[pc_star].Metals, sizeof(float), 1);
+		      swapEndian(&P[pc_star].Metals, sizeof(GFloat), 1);
 		  pc_star++;
 		}
 	      }
 	  else {
-	      fseek(fd,header1.npart[4]*sizeof(float), SEEK_CUR);
+	      fseek(fd,header1.npart[4]*sizeof(GFloat), SEEK_CUR);
 	      }
-	  SKIP(fd, swap, sizeof(float)*1*header1.npart[4]);
+	  SKIP(fd, swap, sizeof(GFloat)*1*header1.npart[4]);
 	  }
       /*----------------------------------------------------------*/
       /* Extra variables */
