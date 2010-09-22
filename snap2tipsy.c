@@ -285,6 +285,8 @@ void set_unit()
   fprintf(stdout, "velocity is in units of %g km/s; time is in units of %g Gyr\n",
 	  Unit.Natural_vel_in_cgs/1e5,
 	  Unit.Length_in_cm/Unit.Natural_vel_in_cgs/(1e9*SEC_PER_YEAR));
+  fprintf(stdout, "time is in units of %g Gyr\n", Unit.Time_in_s/((1e9*SEC_PER_YEAR)));
+  fprintf(stdout, "G is %g in these units\n",  GRAVITY/pow(Unit.Length_in_cm, 3) * Unit.Mass_in_g * pow(Unit.Time_in_s, 2));
   
     }
 
@@ -369,8 +371,10 @@ int output_tipsy_gas(char *output_fname)
   int   i;
   FILE *outfile;
   /* Gadget units have an extra sqrt(a) in the internal velocities. */
-  double vscale = sqrt(1.0 + header1.redshift)
+  double vscale = sqrt(1.0 + header1.redshift);
+  /*
       *Unit.Velocity_in_cm_per_s/Unit.Natural_vel_in_cgs;
+      */
 
   if(!(outfile = fopen(output_fname,"w")))
     {
@@ -422,7 +426,11 @@ int output_tipsy_star(char *output_fname, int bBH)
   int   i;
   FILE *outfile;
   /* Gadget units have an extra sqrt(a) in the internal velocities. */
-  double vscale = sqrt(1.0 + header1.redshift)*Unit.Velocity_in_cm_per_s/Unit.Natural_vel_in_cgs;
+  double vscale = sqrt(1.0 + header1.redshift);
+  /*
+    *Unit.Velocity_in_cm_per_s/Unit.Natural_vel_in_cgs;
+    */
+
 
   if(!(outfile = fopen(output_fname,"a")))
     {
@@ -496,7 +504,10 @@ int output_tipsy_dark(char *output_fname, int type)
   int   i;
   FILE *outfile;
   /* Gadget units have an extra sqrt(a) in the internal velocities. */
-  double vscale = sqrt(1.0 + header1.redshift)*Unit.Velocity_in_cm_per_s/Unit.Natural_vel_in_cgs;
+  double vscale = sqrt(1.0 + header1.redshift);
+  /*
+   * Unit.Velocity_in_cm_per_s/Unit.Natural_vel_in_cgs;
+   */
 
   if(!(outfile = fopen(output_fname,"a")))
     {
