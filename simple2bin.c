@@ -1,5 +1,8 @@
 /* $Header$
  * $Log$
+ * Revision 1.2  2011/06/21 20:55:47  trq
+ * Fixed output of star particles.
+ *
  * Revision 1.1  2006/04/13 21:13:32  trq
  * Read simple files.
  *
@@ -86,7 +89,7 @@ main()
 		    &sp->vel[0], &sp->vel[1], &sp->vel[2]);
 	}
 	fwrite((char *)star_particles,sizeof(struct star_particle),
-			 header.nstar,stdin) ;
+			 header.nstar,stdout) ;
 
 	fprintf(stderr,"read time %f\n",header.time) ;
 
