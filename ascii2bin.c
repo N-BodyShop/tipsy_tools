@@ -1,5 +1,8 @@
 /* $Header$
  * $Log$
+ * Revision 1.4  2013/04/02 22:45:29  trq
+ * Initialize gas_particles, dark_particles, and star_particles.
+ *
  * Revision 1.3  2006/07/19 00:10:06  trq
  * Fixed up conversion programs to match changes to tipsydefs.h
  *
@@ -33,9 +36,9 @@ main()
     int ndark ;
     int nstar ;
     int count ;
-    struct gas_particle *gp, *lastgp, *gas_particles;
-    struct dark_particle *dp, *lastdp, *dark_particles;
-    struct star_particle *sp, *lastsp, *star_particles ;
+    struct gas_particle *gp, *lastgp, *gas_particles = NULL;
+    struct dark_particle *dp, *lastdp, *dark_particles = NULL;
+    struct star_particle *sp, *lastsp, *star_particles = NULL;
 
     forever {
 	count=fscanf(stdin, "%d%*[, \t\n]%d%*[, \t\n]%d"
