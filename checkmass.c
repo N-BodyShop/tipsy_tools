@@ -16,9 +16,12 @@ main()
     struct dump header;
     double mass_min, mass_max;
     double soft_min, soft_max;
+    double mass_gas_t, mass_dark_t, mass_star_t;
+	
     
     soft_min = mass_min = 1e38;
     soft_max = mass_max = -1e38;
+    mass_gas_t = mass_dark_t = mass_star_t = 0.0;
     xdrstdio_create(&xdrs, stdin, XDR_DECODE);
 	if(xdr_header(&xdrs, &header) != 1)
 	  return -1;
@@ -29,6 +32,7 @@ main()
 
 	for(i = 0; i < header.nsph; i++) {
 	    xdr_gas(&xdrs, &gas);
+	    mass_gas_t += gas.mass;
 	    if(gas.mass > mass_max)
 		mass_max = gas.mass;
 	    if(gas.hsmooth > soft_max)
@@ -44,6 +48,7 @@ main()
     soft_max = mass_max = -1e38;
 	for(i = 0; i < header.ndark; i++) {
 	    xdr_dark(&xdrs, &dark);
+	    mass_dark_t += dark.mass;
 	    if(dark.mass > mass_max)
 		mass_max = dark.mass;
 	    if(dark.eps > soft_max)
@@ -59,6 +64,7 @@ main()
     soft_max = mass_max = -1e38;
 	for(i = 0; i < header.nstar; i++) {
 	    xdr_star(&xdrs, &star);
+	    mass_star_t += star.mass;
 	    if(star.mass > mass_max)
 		mass_max = star.mass;
 	    if(star.eps > soft_max)
@@ -71,6 +77,9 @@ main()
 	fprintf(stderr, "Star: mmin %g mmax %g smin %g smax %g\n", mass_min, mass_max,
 		soft_min, soft_max);
 	fprintf(stderr, "read time %f\n",header.time) ;
+	fprintf(stderr, "total gas, dark, star, all: %g %g %g %g\n",
+		mass_gas_t, mass_dark_t, mass_star_t,
+		mass_gas_t + mass_dark_t + mass_star_t) ;
   xdr_destroy(&xdrs);
   return 0;
 }
