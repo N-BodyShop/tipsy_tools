@@ -1,3 +1,0 @@
-project siman ;
-
-project boost : $(BOOST_ROOT) ;

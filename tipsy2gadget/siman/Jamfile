@@ -1,4 +1,0 @@
-project-root ;
-
-subinclude base ;
-subinclude progs ; 

@@ -1,9 +1,0 @@
-
-lib simanextra : ionise.cpp foffile.cpp subsets.cpp grpfile.cpp
-:
-	<define>SIMAN_COMPILING_LIBRARY=1
-	$(PYTHON_PROPERTIES)
-	
-	;
-
-
