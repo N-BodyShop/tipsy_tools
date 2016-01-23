@@ -23,7 +23,7 @@ int argc;
     sscanf(argv[1],"%s",binaryfile.name) ;
     sscanf(argv[2],"%lf",&time) ;
     if( (binaryfile.ptr = fopen(binaryfile.name,"r"))== NULL) {
-	fprintf(stderr,"<sorry, binary file %s does not exist, %s>\n",
+	fprintf(stderr,"<sorry, binary file %s does not exist>\n",
 	    binaryfile.name) ;
     }
     else{
