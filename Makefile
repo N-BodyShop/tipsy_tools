@@ -26,6 +26,9 @@ tipsy2snap: tipsy2snap.o
 snap2tipsy: snap2tipsy.o
 	$(CC) $(CFLAGS) -o snap2tipsy snap2tipsy.o -lm $(LIBS)
 
+trimstd: trimstd.o
+	$(CC) $(CFLAGS) -o trimstd trimstd.o -lm $(LIBS)
+
 clean:
 	rm -f *.o
 	rm -f $(TOOLS)
