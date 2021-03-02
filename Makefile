@@ -1,4 +1,4 @@
-TOOLS = ascii2bin bin2ascii totipnat totipstd snapshot
+TOOLS = ascii2bin bin2ascii totipnat totipstd snapshot bin2genga
 CFLAGS =  -Wall -O -g
 all: $(TOOLS)
 
@@ -22,6 +22,9 @@ snapshot: snapshot.o
 
 tipsy2snap: tipsy2snap.o
 	$(CC) $(CFLAGS) -o tipsy2snap tipsy2snap.o -lm $(LIBS)
+
+bin2genga: bin2genga.o
+	$(CC) $(CFLAGS) -o bin2genga bin2genga.o -lm $(LIBS)
 
 snap2tipsy: snap2tipsy.o
 	$(CC) $(CFLAGS) -o snap2tipsy snap2tipsy.o -lm $(LIBS)
