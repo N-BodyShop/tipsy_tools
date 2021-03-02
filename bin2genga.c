@@ -15,7 +15,7 @@ main()
 {
     struct dark_particle *dark_particles, *dp, *lastdp;
     struct dump header;
-    
+
     while(1) 
       {
 	if(fread((char *)&header,sizeof(header),1,stdin) == 0)
@@ -28,6 +28,11 @@ main()
 		return -1;
 	    }
 	}
+
+    if((header.nstar != 0) || (header.nsph != 0)) {
+        printf("<snapshots must contain only dark particles>\n");
+    return -1;
+    }
     
 	fread((char *)dark_particles,sizeof(struct dark_particle),
 			 header.ndark,stdin) ;
