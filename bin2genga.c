@@ -29,20 +29,20 @@ main()
 	    }
 	}
 
-    if((header.nstar != 0) || (header.nsph != 0)) {
-        printf("<snapshots must contain only dark particles>\n");
-    return -1;
-    }
+	if((header.nstar != 0) || (header.nsph != 0)) {
+		printf("<snapshots must contain only dark particles>\n");
+		return -1;
+	}
     
 	fread((char *)dark_particles,sizeof(struct dark_particle),
 			 header.ndark,stdin) ;
 
 	lastdp = dark_particles + header.ndark ;
 
-    for(dp=dark_particles; dp< lastdp; dp++) {
-        fprintf(stdout,"%g %g %g %g %g %g %g %g\n", dp->pos[0], dp->pos[1], dp->pos[2],
-                dp->mass, dp->vel[0], dp->vel[1], dp->vel[2], dp->eps*2);
-    }
+	for(dp=dark_particles; dp< lastdp; dp++) {
+		fprintf(stdout,"%g %g %g %g %g %g %g %g\n", dp->pos[0], dp->pos[1], dp->pos[2],
+		    dp->mass, dp->vel[0], dp->vel[1], dp->vel[2], dp->eps*2);
+	}
 
 	if(header.ndark != 0) {
 	  free(dark_particles);
