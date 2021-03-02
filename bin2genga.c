@@ -39,10 +39,10 @@ main()
 
 	lastdp = dark_particles + header.ndark ;
 
-    for(dp=dark_particles; dp< lastdp; dp++) {
-        fprintf(stdout,"%g %g %g %g %g %g %g %g\n", dp->pos[0], dp->pos[1], dp->pos[2],
-                dp->mass, dp->vel[0], dp->vel[1], dp->vel[2], dp->eps*2);
-    }
+	for(dp=dark_particles; dp< lastdp; dp++) {
+		fprintf(stdout,"%g %g %g %g %g %g %g %g\n", dp->pos[0], dp->pos[1], dp->pos[2],
+		    dp->mass, dp->vel[0], dp->vel[1], dp->vel[2], dp->eps*2);
+	}
 
 	if(header.ndark != 0) {
 	  free(dark_particles);
