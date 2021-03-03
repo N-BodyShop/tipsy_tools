@@ -45,16 +45,16 @@ if (keyword_set(verbose)) then print,"Read time,n,ngas,nstar,ndark: ",header.tim
 
 fs = fstat(1)
 ;;; Explicitly pad header if required 
-if (fs.size eq 32L+header.ngas*48+header.ndark*36+header.nstar*44) then begin
+if (fs.size eq 32LL+header.ngas*48LL+header.ndark*36LL+header.nstar*44LL) then begin
   dummy = 1L
   readu,1,dummy
-endif else if (fs.size ne 28L+header.ngas*48+header.ndark*36+header.nstar*44) then begin  
+endif else if (fs.size ne 28LL+header.ngas*48LL+header.ndark*36LL+header.nstar*44LL) then begin  
   print, "RTIPSY ERROR: Header and file size inconsistent"
   print, "Estimates: Header bytes:  28 or 32 (either is OK)"
-  print, "     ngas: ",header.ngas," bytes:",48*header.ngas
-  print, "    ndark: ",header.ndark," bytes:",36*header.ndark
-  print, "    nstar: ",header.nstar," bytes:",44*header.nstar
-  print, "Actual File bytes:",fs.size,"  not one of:",32L+header.ngas*48+header.ndark*36+header.nstar*44,28L+header.ngas*48+header.ndark*36+header.nstar*44
+  print, "     ngas: ",header.ngas," bytes:",48LL*header.ngas
+  print, "    ndark: ",header.ndark," bytes:",36LL*header.ndark
+  print, "    nstar: ",header.nstar," bytes:",44LL*header.nstar
+  print, "Actual File bytes:",fs.size,"  not one of:",32LL+header.ngas*48LL+header.ndark*36LL+header.nstar*44LL,28LL+header.ngas*48LL+header.ndark*36LL+header.nstar*44LL
   close,1
   return
 endif
