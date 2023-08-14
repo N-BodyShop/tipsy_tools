@@ -1,5 +1,6 @@
 TOOLS = ascii2bin bin2ascii totipnat totipstd snapshot bin2genga
-CFLAGS =  -Wall -O -g
+CFLAGS =  -Wall -O -g -I /usr/include/tirpc
+LIBS = -ltirpc
 all: $(TOOLS)
 
 ascii2bin: ascii2bin.o
@@ -42,11 +43,9 @@ tipsy_tools:
 
 ascii2bin.o: /usr/include/stdio.h tipsydefs.h
 bin2ascii.o: /usr/include/stdio.h tipsydefs.h
-totipnat.o: /usr/include/stdio.h tipsydefs.h /usr/include/rpc/types.h
+totipnat.o: /usr/include/stdio.h tipsydefs.h
 totipnat.o: /usr/include/sys/types.h /usr/include/sys/time.h
 totipnat.o: /usr/include/sys/time.h /usr/include/stdlib.h
-totipnat.o: /usr/include/rpc/xdr.h
-totipstd.o: /usr/include/stdio.h tipsydefs.h /usr/include/rpc/types.h
+totipstd.o: /usr/include/stdio.h tipsydefs.h
 totipstd.o: /usr/include/sys/types.h /usr/include/sys/time.h
 totipstd.o: /usr/include/sys/time.h /usr/include/stdlib.h
-totipstd.o: /usr/include/rpc/xdr.h
